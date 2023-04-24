@@ -11,9 +11,6 @@ module.exports = {
         primary: {
           ...colors.indigo,
         },
-        slate: {
-          50: '#f8fafc',
-        },
       },
     },
   },

@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @layer components {
-
 
     /** General button styles */
     .btn {

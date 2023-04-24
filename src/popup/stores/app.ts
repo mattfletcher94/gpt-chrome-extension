@@ -5,21 +5,13 @@ export const useAppStore = defineStore('app', {
         openAIAPIKey: '',
     }),
     actions: {
-        init() {
-            return new Promise((resolve, reject) => {
-                chrome.storage.local.get(['openai-api-key'], (result) => {
-                    this.openAIAPIKey = result['openai-api-key']
-                    resolve(result)
-                });
-            });
+        async init() {
+            const result = await chrome.storage.local.get(['openai-api-key']);
+            this.openAIAPIKey = result['openai-api-key']
         },
-        setOpenAIApiKey(key: string) {
-            return new Promise((resolve, reject) => {
-                chrome.storage.local.set({ 'openai-api-key': key }, () => {
-                    this.openAIAPIKey = key
-                    resolve(key)
-                });
-            });
+        async setOpenAIApiKey(key: string) {
+            await chrome.storage.local.set({ 'openai-api-key': key });
+            this.openAIAPIKey = key
         },
     }
 });

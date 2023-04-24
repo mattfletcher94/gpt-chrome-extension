@@ -5,7 +5,6 @@ import TitleBar from '../components/TitleBar.vue';
 import IconBook from '../components/IconBook.vue';
 import IconChat from '../components/IconChat.vue';
 import IconDocumentFind from '../components/IconDocumentFind.vue';
-import IconShare from '../components/IconShare.vue';
 import IconSettings from '../components/IconSettings.vue';
 import IconError from '../components/IconError.vue';
 import { useAppStore } from '../stores/app';
@@ -44,12 +43,10 @@ const actions = ref([
 
 function summarizeWebPage() {
     router.push('/summarize-web-page');
-    // Implement the summarize web page feature here
 }
 
 function summarizeHighlightedText() {
     router.push('/summarize-highlighted-text');
-    // Implement the summarize highlighted text feature here
 }
 
 function smartQuestionAnswering() {

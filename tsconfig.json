@@ -16,7 +16,6 @@
       "dom"
     ],
     "types": [
-      "element-plus/global",
       "@types/chrome"
     ],
     "skipLibCheck": true
