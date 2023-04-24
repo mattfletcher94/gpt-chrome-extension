@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer components {
+
+
+    /** General button styles */
+    .btn {
+      @apply inline-block text-center text-sm px-4 py-2 rounded-md font-medium transition-colors tracking-wide !no-underline cursor-pointer;
+      @apply outline outline-offset-2 outline-transparent;
+    }
+    
+    /** Large button */
+    .btn--lg {
+      @apply px-10 py-3;
+    }
+  
+    .btn--sm {
+      @apply px-2 py-1.5 text-sm;
+    }
+  
+    /** Primary button */
+    .btn.btn--primary {
+      @apply bg-primary-500 text-white hover:bg-primary-600 focus-within:outline-primary-600;
+    }
+  
+    /** Secondary button */
+    .btn.btn--secondary {
+      @apply bg-primary-100 text-primary-500 hover:bg-primary-200 focus-within:outline-primary-500;
+    }
+  
+    .btn.btn--gray {
+      @apply bg-slate-100 text-gray-800 hover:bg-slate-200 focus:bg-slate-200;
+    }
+  
+    /** Light button */
+    .btn.btn--light {
+      @apply bg-transparent text-gray-800 hover:bg-slate-200 focus:bg-slate-200;
+    }
+  
+    /** Danger button */
+    .btn.btn--danger {
+      @apply bg-red-500 text-white hover:bg-red-600 focus-within:outline-red-500;
+    }
+  
+    /** Disabled button */
+    .btn[disabled] {
+      @apply opacity-50 cursor-not-allowed;
+    }
+  
+    /** Inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="url"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="date"],
+    input[type="color"],
+    textarea,
+    select,
+    .input,
+    .select {
+      @apply 
+        relative
+        block
+        w-full
+        p-2.5
+        bg-gray-50
+        border
+        border-gray-300
+        text-slate-700
+        text-sm
+        text-left
+        rounded-md
+        outline-none
+        shadow-none
+        transition-colors
+        placeholder:text-slate-500
+        focus:outline-none
+        focus:border
+        focus:border-primary-500;
+    }
+    input[type="color"] {
+      @apply px-2.5 py-0.5;
+    }
+  
+}
+  
+html {
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    font-size: 14px;
+}
