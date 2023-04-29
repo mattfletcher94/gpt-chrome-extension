@@ -85,7 +85,103 @@
     input[type="color"] {
       @apply px-2.5 py-0.5;
     }
+
+    .prose-card {
+      @apply prose max-w-none;
+      @apply
+
+      /** Headings **/
+      prose-headings:text-gray-700
+      prose-headings:font-bold
+      prose-h1:text-lg
+      prose-h2:text-base
+      prose-h3:text-sm
+      prose-h4:text-sm
+
+      /** Paragraph */
+      prose-p:text-gray-700
+      prose-p:text-base
+
+      /** Anchor */
+      prose-a:no-underline 
+      prose-a:text-primary-500
+
+      /** Lists */
+      prose-ul:list-outside
+      prose-li:text-gray-700
+      prose-li:text-base
+
+      /** Strong */
+      prose-strong:font-bold
+      prose-strong:text-gray-700
+
+      /** Margins */
+      prose-h1:mt-0
+      prose-h1:mb-[1em]
+      prose-h2:mt-0
+      prose-h2:mb-[1em]
+      prose-h3:mt-0
+      prose-h3:mb-[1em]
+      prose-h4:mt-0
+      prose-h4:mb-[1em]
+      prose-p:mt-0
+      prose-p:mb-[1em]
+      prose-ul:mt-0
+      prose-ul:mb-[1em]
+  }
+
+  .prose-card > *:last-child {
+    @apply mb-0;
+  }
+
+  .prose-card--dark {
+    @apply prose max-w-none;
+    @apply
+
+    /** Headings **/
+    prose-headings:text-white
+    prose-headings:font-bold
+    prose-h1:text-lg
+    prose-h2:text-base
+    prose-h3:text-sm
+    prose-h4:text-sm
+
+    /** Paragraph */
+    prose-p:text-gray-100
+    prose-p:text-base
+
+    /** Anchor */
+    prose-a:no-underline 
+    prose-a:text-primary-200
+
+    /** Lists */
+    prose-ul:list-outside
+    prose-li:text-gray-100
+    prose-li:text-base
+
+    /** Strong */
+    prose-strong:font-bold
+    prose-strong:text-gray-100
+
+    /** Margins */
+    prose-h1:mt-0
+    prose-h1:mb-[1em]
+    prose-h2:mt-0
+    prose-h2:mb-[1em]
+    prose-h3:mt-0
+    prose-h3:mb-[1em]
+    prose-h4:mt-0
+    prose-h4:mb-[1em]
+    prose-p:mt-0
+    prose-p:mb-[1em]
+    prose-ul:mt-0
+    prose-ul:mb-[1em]
+  }
   
+  .prose-card--dark > *:last-child {
+    @apply mb-0;
+  }
+
 }
   
 html {

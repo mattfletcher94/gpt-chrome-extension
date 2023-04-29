@@ -4,12 +4,24 @@ import TitleBar from '../components/TitleBar.vue'
 import { onMounted, ref } from 'vue'
 import { useAppStore } from '../stores/app';
 import { Configuration, OpenAIApi } from "openai";
+import IconBook from '../components/IconBook.vue';
+import ChatWindow from '../components/ChatWindow.vue'
+import { v4 as uuidv4 } from 'uuid'
+
+type ChatMessage = {
+    id: string
+    text: string
+    createdAt: Date
+    sender: 'user' | 'bot'
+}
+
 
 const router = useRouter()
 const appStore = useAppStore()
 
 const generatedContent = ref('')
 const generatedError = ref('')
+const chatMessages = ref<ChatMessage[]>([])
 
 const openai = ref(new OpenAIApi(new Configuration({
   apiKey: appStore.openAIAPIKey,
@@ -22,6 +34,9 @@ function goBack() {
 onMounted(async () => {
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+    if (!tab.id)
+        return;
+    
     const [res] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => document.querySelector('html')?.innerHTML ?? '',
@@ -65,7 +80,13 @@ onMounted(async () => {
                 }
             ],
         });
-        generatedContent.value = completion.data.choices[0].message?.content ?? '';
+        //generatedContent.value = completion.data.choices[0].message?.content ?? '';
+        chatMessages.value.push({
+            id: uuidv4(),
+            text: completion.data.choices[0].message?.content ?? '',
+            createdAt: new Date(),
+            sender: 'bot'
+        })
     } catch (error) {
         generatedError.value = error.response
     }
@@ -73,7 +94,7 @@ onMounted(async () => {
 
 </script>
 <template>
-    <div class="w-full h-full overflow-x-hidden overflow-y-auto">
+    <div class="w-full h-full overflow-hidden">
         <!-- Toolbar with back-->
         <TitleBar
             :back-button="goBack"
@@ -81,9 +102,9 @@ onMounted(async () => {
             <template #title>
                 <div class="flex items-center gap-2">
                     <div>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="text-blue-500 w-5 h-5 block">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                        </svg>
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500 text-white">
+                            <IconBook class="w-5 h-5" />
+                        </div>
                     </div>
                     <div>
                         Summarize Web Page
@@ -91,6 +112,12 @@ onMounted(async () => {
                 </div>
             </template>
         </TitleBar>
+        <div class="flex-shrink w-full h-[calc(100%-4rem)]">
+            <ChatWindow
+                :messages="chatMessages"
+            />
+        </div>
+        <!--
         <div class="p-4">
             <p class="text-gray-700 dark:text-gray-300">
                 {{ generatedContent }}
@@ -99,5 +126,6 @@ onMounted(async () => {
                 <pre>{{ generatedError }}</pre>
             </p>
         </div>
+        -->
     </div>
 </template>

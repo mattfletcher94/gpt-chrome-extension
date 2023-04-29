@@ -7,6 +7,7 @@ import IconChat from '../components/IconChat.vue';
 import IconDocumentFind from '../components/IconDocumentFind.vue';
 import IconSettings from '../components/IconSettings.vue';
 import IconError from '../components/IconError.vue';
+import IconClipboard from '../components/IconClipboard.vue';
 import { useAppStore } from '../stores/app';
 
 const appStore = useAppStore();
@@ -109,10 +110,13 @@ function settings() {
                     class="h-24 border border-gray-200 p-2 rounded-lg bg-white dark:bg-gray-800 hover:bg-primary-50 hover:border-primary-500 focus-visible:bg-primary-50 focus-visible:border-primary-500 focus:outline-none focus-visible:ring-offset-2 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-opacity-50 transition-colors"
                 >
                     <div class="flex flex-col items-center gap-2">
-                        <IconBook v-if="action.id == 'summarize-web-page'" class="w-6 h-6 text-primary-500" />
-                        <IconChat v-else-if="action.id == 'smart-question-answering'" class="w-6 h-6 text-primary-500" />
-                        <IconDocumentFind v-else-if="action.id == 'content-extraction'" class="w-6 h-6 text-primary-500" />
-                        <IconSettings v-else-if="action.id == 'settings'" class="w-6 h-6 text-primary-500" />
+                        <div class="flex items-center justify-center bg-primary-500 text-white rounded-full w-8 h-8">
+                            <IconBook v-if="action.id == 'summarize-web-page'" class="w-5 h-5" />
+                            <IconClipboard v-if="action.id == 'summarize-highlighted-text'" class="w-5 h-5" />
+                            <IconChat v-else-if="action.id == 'smart-question-answering'" class="w-5 h-5"  />
+                            <IconDocumentFind v-else-if="action.id == 'content-extraction'" class="w-5 h-5"  />
+                            <IconSettings v-else-if="action.id == 'settings'" class="w-5 h-5"  />
+                        </div>
                         <p class="font-normal text-sm text-gray-800 dark:text-gray-100 leading-tight">
                             {{ action.name }}
                         </p>

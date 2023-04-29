@@ -10,10 +10,11 @@ onMounted(() => {
     appReady.value = true;
   });
 })
+
 </script>
 
 <template>
-  <div class="w-[350px] h-[380px] overflow-hidden">
+  <div class="w-[420px] h-[540px] overflow-hidden">
     <!-- Router view with transitions -->
     <router-view v-if="appReady" v-slot="{ Component }">
       <transition name="page" mode="out-in">
