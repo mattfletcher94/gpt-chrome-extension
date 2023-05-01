@@ -26,7 +26,7 @@ const formatMarkdown = (text: string) => {
 
 </script>
 <template>
-  <div class="w-full h-auto overflow-hidden p-4">
+  <div class="relative w-full h-auto overflow-hidden p-4">
     <template
       v-for="thread in populatedThreads"
       :key="thread.id"
@@ -35,11 +35,12 @@ const formatMarkdown = (text: string) => {
       <div class="flex justify-center items-center max-w-[66%] mx-auto break-words mb-4">
         <a
           :href="thread.url"
-          :title="`Open ${thread.title} in a new tab`"
+          v-tooltip='{ content: thread.url }'
           target="_blank" 
-          class="flex items-center gap-3 p-3 rounded-xl overflow-hidden cursor-pointer bg-gray-100 hover:bg-gray-200 focus-visible:bg-gray-200 transition-all"
+          class="relative flex items-center gap-3 p-3 rounded-xl overflow-hidden cursor-pointer bg-gray-100 hover:bg-gray-200 focus-visible:bg-gray-200 transition-all"
         >
-          <img :src="thread.icon" class="w-5 h-5 object-cover object-center " />
+          <img :src="thread.icon" alt="" class="absolute inset-0 w-full h-full object-fill opacity-20 blur-lg" />
+          <img :src="thread.icon" :alt="thread.title" class="w-5 h-5 object-cover object-center" />
           <p class="truncate font-medium text-sm">{{ thread.title }}</p>
         </a>
       </div>
@@ -77,8 +78,8 @@ const formatMarkdown = (text: string) => {
           <div
             class="rounded-xl p-3 max-w-full overflow-hidden cursor-default"
             :class="{
-              'bg-primary-500 ml-auto': message.sender === 'user',
-              'bg-gray-100': message.sender === 'bot' && message.state !== 'error',
+              'bg-gradient-to-br from-primary-500 to-primary-600 ml-auto': message.sender === 'user',
+              'bg-gradient-to-br from-gray-100 to-gray-200': message.sender === 'bot' && message.state !== 'error',
               'bg-red-100': message.sender === 'bot' && message.state === 'error',
             }"
           >

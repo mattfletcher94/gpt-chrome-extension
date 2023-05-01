@@ -128,7 +128,7 @@
       prose-p:mb-[1em]
       prose-ul:mt-0
       prose-ul:mb-[1em]
-  }
+    }
 
   .prose-card > *:last-child {
     @apply mb-0;
@@ -200,4 +200,21 @@ body {
 }
 ::-webkit-scrollbar-thumb {
   background-color: rgba(0,0,0,0.2);
+}
+
+
+/** Tooltip overrides */
+.v-popper__popper .v-popper__wrapper .v-popper__inner {
+  @apply !text-xs !font-normal !px-4 !py-2;
+  background-color: rgba(0,0,0,0.95);
+}
+.v-popper__popper {
+  z-index: 9999999!important;
+}
+.v-popper__popper .v-popper__wrapper .v-popper__arrow-inner {
+  display: none;
+}
+
+.v-popper__popper .v-popper__wrapper .v-popper__arrow-outer {
+  border-color: rgba(0,0,0,0.95);
 }

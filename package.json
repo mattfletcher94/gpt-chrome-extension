@@ -1,16 +1,16 @@
 {
   "dependencies": {
-    "@dqbd/tiktoken": "^1.0.7",
+    "@headlessui/vue": "^1.7.13",
     "@mozilla/readability": "^0.4.4",
     "@tailwindcss/forms": "^0.5.3",
+    "floating-vue": "2.0.0-beta.20",
     "marked": "^4.3.0",
     "openai": "^3.2.1",
     "pinia": "^2.0.35",
     "turndown": "^7.1.2",
     "uuid": "^9.0.0",
     "vue": "^3.2.37",
-    "vue-router": "4",
-    "zod": "^3.21.4"
+    "vue-router": "4"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^1.0.12",

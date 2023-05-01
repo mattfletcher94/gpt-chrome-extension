@@ -2,7 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@crxjs/vite-plugin': ^1.0.12
-  '@dqbd/tiktoken': ^1.0.7
+  '@headlessui/vue': ^1.7.13
   '@mozilla/readability': ^0.4.4
   '@tailwindcss/forms': ^0.5.3
   '@tailwindcss/typography': ^0.5.9
@@ -11,6 +11,7 @@ specifiers:
   '@types/uuid': ^9.0.1
   '@vitejs/plugin-vue': ^2.3.3
   autoprefixer: ^10.4.14
+  floating-vue: 2.0.0-beta.20
   marked: ^4.3.0
   openai: ^3.2.1
   pinia: ^2.0.35
@@ -23,12 +24,12 @@ specifiers:
   vue: ^3.2.37
   vue-router: '4'
   vue-tsc: ^0.38.5
-  zod: ^3.21.4
 
 dependencies:
-  '@dqbd/tiktoken': 1.0.7
+  '@headlessui/vue': 1.7.13_vue@3.2.47
   '@mozilla/readability': 0.4.4
   '@tailwindcss/forms': 0.5.3_tailwindcss@3.3.1
+  floating-vue: 2.0.0-beta.20_vue@3.2.47
   marked: 4.3.0
   openai: 3.2.1
   pinia: 2.0.35_hmuptsblhheur2tugfgucj7gc4
@@ -36,7 +37,6 @@ dependencies:
   uuid: 9.0.0
   vue: 3.2.47
   vue-router: 4.1.6_vue@3.2.47
-  zod: 3.21.4
 
 devDependencies:
   '@crxjs/vite-plugin': 1.0.14_vite@2.9.15
@@ -326,10 +326,6 @@ packages:
       - supports-color
     dev: true
 
-  /@dqbd/tiktoken/1.0.7:
-    resolution: {integrity: sha512-bhR5k5W+8GLzysjk8zTMVygQZsgvf7W1F0IlL4ZQ5ugjo5rCyiwGM5d8DYriXspytfu98tv59niang3/T+FoDw==}
-    dev: false
-
   /@esbuild/linux-loong64/0.14.54:
     resolution: {integrity: sha512-bZBrLAIX1kpWelV0XemxBZllyRmM6vgFQQG2GdNb+r3Fkp0FOh1NJSvekXDs7jq70k4euu1cryLMfU+mTXlEpw==}
     engines: {node: '>=12'}
@@ -338,6 +334,25 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /@floating-ui/core/0.3.1:
+    resolution: {integrity: sha512-ensKY7Ub59u16qsVIFEo2hwTCqZ/r9oZZFh51ivcLGHfUwTn8l1Xzng8RJUe91H/UP8PeqeBronAGx0qmzwk2g==}
+    dev: false
+
+  /@floating-ui/dom/0.1.10:
+    resolution: {integrity: sha512-4kAVoogvQm2N0XE0G6APQJuCNuErjOfPW8Ux7DFxh8+AfugWflwVJ5LDlHOwrwut7z/30NUvdtHzQ3zSip4EzQ==}
+    dependencies:
+      '@floating-ui/core': 0.3.1
+    dev: false
+
+  /@headlessui/vue/1.7.13_vue@3.2.47:
+    resolution: {integrity: sha512-obG5TdPdBDfs+jiA1mY29LPFqyJl93Q90EL86ontfRe1B6XvbjPkx+x1aAC5DA18bXbb0Juni1ayDbXo0w1u0A==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      vue: ^3.2.0
+    dependencies:
+      vue: 3.2.47
+    dev: false
 
   /@jridgewell/gen-mapping/0.3.3:
     resolution: {integrity: sha512-HLhSWOLRi875zjjMG/r+Nv0oCW8umGb0BgEhyX3dDX3egwZtB8PqLnjz3yedt8R5StBrzcg4aBpnh8UA9D1BoQ==}
@@ -1122,6 +1137,16 @@ packages:
     dependencies:
       to-regex-range: 5.0.1
 
+  /floating-vue/2.0.0-beta.20_vue@3.2.47:
+    resolution: {integrity: sha512-N68otcpp6WwcYC7zP8GeJqNZVdfvS7tEY88lwmuAHeqRgnfWx1Un8enzLxROyVnBDZ3TwUoUdj5IFg+bUT7JeA==}
+    peerDependencies:
+      vue: ^3.2.0
+    dependencies:
+      '@floating-ui/dom': 0.1.10
+      vue: 3.2.47
+      vue-resize: 2.0.0-alpha.1_vue@3.2.47
+    dev: false
+
   /follow-redirects/1.15.2:
     resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
     engines: {node: '>=4.0'}
@@ -1810,6 +1835,14 @@ packages:
       vue: 3.2.47
     dev: false
 
+  /vue-resize/2.0.0-alpha.1_vue@3.2.47:
+    resolution: {integrity: sha512-7+iqOueLU7uc9NrMfrzbG8hwMqchfVfSzpVlCMeJQe4pyibqyoifDNbKTZvwxZKDvGkB+PdFeKvnGZMoEb8esg==}
+    peerDependencies:
+      vue: ^3.0.0
+    dependencies:
+      vue: 3.2.47
+    dev: false
+
   /vue-router/4.1.6_vue@3.2.47:
     resolution: {integrity: sha512-DYWYwsG6xNPmLq/FmZn8Ip+qrhFEzA14EI12MsMgVxvHFDYvlr4NXpVF5hrRH1wVcDP8fGi5F4rxuJSl8/r+EQ==}
     peerDependencies:
@@ -1849,7 +1882,3 @@ packages:
   /yaml/1.10.2:
     resolution: {integrity: sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==}
     engines: {node: '>= 6'}
-
-  /zod/3.21.4:
-    resolution: {integrity: sha512-m46AKbrzKVzOzs/DZgVnG5H55N1sv1M8qZU3A8RIKbs3mrACDNeIOeilDymVb2HdmP8uwshOCF4uJ8uM9rCqJw==}
-    dev: false
