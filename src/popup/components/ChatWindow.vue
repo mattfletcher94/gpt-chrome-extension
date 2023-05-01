@@ -1,92 +1,108 @@
 <script lang="ts" setup>
 import { marked } from 'marked'
-
-type ChatMessage = {
-  id: string
-  text: string
-  state: 'pending' | 'success' | 'error'
-  createdAt: Date
-  sender: 'user' | 'bot'
-}
+import { ChatMessage, ChatThread } from '../types/ChatThread'
+import { computed } from 'vue'
 
 const props = defineProps<{
+  threads: ChatThread[]
   messages: ChatMessage[]
 }>()
 
-const formatDate = (date: Date) => {
-  return new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
+const populatedThreads = computed(() => {
+  return props.threads.map((thread) => {
+    const messages = props.messages.filter((message) => message.threadId === thread.id)
+    return {
+      ...thread,
+      messages,
+    }
+  }).filter((thread) => thread.messages.length > 0)
+})
 
 const formatMarkdown = (text: string) => {
-  return marked.parse(text)
+  const renderer = new marked.Renderer();
+  renderer.link = ( href, title, text ) => `<a target="_blank" href="${ href }" title="${ title }">${ text }</a>`;
+  return marked.parse(text, { renderer })
 }
 
 </script>
 <template>
-  <div class="w-full h-full overflow-y-auto overflow-x-hidden p-4">
-    <div v-for="message in props.messages" :key="message.id" class="mb-4">
-      <div
-        class="max-w-3/4 break-words flex items-center"
-        :class="{
-          'ml-auto': message.sender === 'user',
-          'mr-auto': message.sender === 'bot',
-        }"
+  <div class="w-full h-auto overflow-hidden p-4">
+    <template
+      v-for="thread in populatedThreads"
+      :key="thread.id"
+    >
+      <!-- Render thread tab info -->
+      <div class="flex justify-center items-center max-w-[66%] mx-auto break-words mb-4">
+        <a
+          :href="thread.url"
+          :title="`Open ${thread.title} in a new tab`"
+          target="_blank" 
+          class="flex items-center gap-3 p-3 rounded-xl overflow-hidden cursor-pointer bg-gray-100 hover:bg-gray-200 focus-visible:bg-gray-200 transition-all"
+        >
+          <img :src="thread.icon" class="w-5 h-5 object-cover object-center " />
+          <p class="truncate font-medium text-sm">{{ thread.title }}</p>
+        </a>
+      </div>
+      <!-- Render thread messages -->
+      <div 
+        v-for="message in thread.messages"
+        :key="message.id"
+        class="block w-full mb-4"
       >
-        <span
-          v-if="message.sender === 'bot'"
-          class="mr-2 text-lg"
-          aria-label="robot"
-          role="img"
-        >
-          🤖
-        </span>
-        <div
-          class="rounded-xl p-3 cursor-default"
+        <div 
+          class="flex items-center gap-2"
           :class="{
-            'bg-primary-600 ml-auto': message.sender === 'user',
-            'bg-gray-100': message.sender === 'bot',
-          }"
+            'justify-end flex-row-reverse': message.sender === 'user',
+            'justify-start': message.sender === 'bot',
+          }"  
         >
-          <div 
-              v-if="message.state === 'success'"
-              :class="{
-                'prose-card': message.sender === 'bot',
-                'prose-card--dark': message.sender === 'user',
-              }"
-              v-html="formatMarkdown(message.text)"
-            >
+          <!-- avatar -->
+          <div
+            v-if="message.sender === 'bot'"
+            class="text-lg"
+            aria-label="robot"
+            role="img"
+          >
+            🤖
           </div>
-          <div v-else-if="message.state === 'pending'">
-            <div class="loading-indicator flex justify-center items-center space-x-1">
-              <div class="dot animate-bounce h-2 w-2 bg-gray-400 rounded-full"></div>
-              <div class="dot animate-bounce200 h-2 w-2 bg-gray-400 rounded-full"></div>
-              <div class="dot animate-bounce400 h-2 w-2 bg-gray-400 rounded-full"></div>
+          <div 
+            v-else-if="message.sender === 'user'"
+            class="text-lg"
+            aria-label="user"
+            role="img"
+          >
+            💬
+          </div>
+          <!-- Message -->
+          <div
+            class="rounded-xl p-3 max-w-full overflow-hidden cursor-default"
+            :class="{
+              'bg-primary-500 ml-auto': message.sender === 'user',
+              'bg-gray-100': message.sender === 'bot' && message.state !== 'error',
+              'bg-red-100': message.sender === 'bot' && message.state === 'error',
+            }"
+          >
+            <div 
+                v-if="message.state === 'success' || message.state === 'error'"
+                class="break-words w-full block"
+                :class="{
+                  'prose-card': message.sender === 'bot',
+                  'prose-card--dark': message.sender === 'user',
+                }"
+                v-html="formatMarkdown(message.text)"
+              >
+            </div>
+            <div v-else-if="message.state === 'pending'">
+              <div class="loading-indicator flex justify-center items-center space-x-1">
+                <div class="dot animate-bounce h-2 w-2 bg-gray-400 rounded-full"></div>
+                <div class="dot animate-bounce200 h-2 w-2 bg-gray-400 rounded-full"></div>
+                <div class="dot animate-bounce400 h-2 w-2 bg-gray-400 rounded-full"></div>
+              </div>
             </div>
           </div>
         </div>
-        <span
-          v-if="message.sender === 'user'"
-          class="ml-2 text-lg"
-          aria-label="user"
-          role="img"
-        >
-          💬
-        </span>
       </div>
-      <div
-        v-if="message.state !== 'pending'"
-        class="text-[10px] text-gray-600 mt-1"
-        :class="{
-          'text-right pr-10': message.sender === 'user',
-          'text-left pl-10': message.sender === 'bot',
-        }"
-      >
-        {{ formatDate(message.createdAt) }}
-      </div>
-    </div>
+    </template>
   </div>
 </template>
 <style scoped>

@@ -1,32 +1,30 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import TitleBar from '../components/TitleBar.vue'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAppStore } from '../stores/app';
 import { Configuration, OpenAIApi } from "openai";
 import { v4 as uuid } from 'uuid';
 import ChatWindow from '../components/ChatWindow.vue';
 import IconSettings from '../components/IconSettings.vue';
-import { marked } from 'marked'
+import IconAdd from '../components/IconAdd.vue';
+import IconBolt from '../components/IconBolt.vue';
+import IconChevron from '../components/IconChevron.vue';
+import { Readability } from '@mozilla/readability'
+// @ts-expect-error missing types
 import TurndownService from 'turndown'
-
-type ChatMessage = {
-  id: string
-  text: string
-  state: 'pending' | 'success' | 'error'
-  createdAt: Date
-  sender: 'user' | 'bot'
-}
+import { generatePrompt } from '../prompts';
 
 const router = useRouter()
 const appStore = useAppStore()
-const chatMessages = ref<ChatMessage[]>([])
+const activeThread = ref('')
+const prompt = ref('')
+const pending = ref(false)
+const chatWindowWrapper = ref<HTMLElement>()
 
-const openai = ref(new OpenAIApi(new Configuration({
-  apiKey: appStore.openAIAPIKey,
-})));
+const openai = ref(new OpenAIApi(new Configuration({ apiKey: appStore.getOpenaiKey() })));
 
-const pending = computed(() => chatMessages.value.filter(m => m.state === 'pending').length > 0)
+//const pending = computed(() => chatMessages.value.filter(m => m.state === 'pending').length > 0)
 
 async function getWebPageContent() {
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
@@ -43,145 +41,169 @@ async function getWebPageContent() {
     // Get page title, meta description, and h1
     const title = doc.querySelector('title')?.innerText ?? '';
     const description = doc.querySelector('meta[name="description"]')?.getAttribute('content') ?? '';
-    const h1 = doc.querySelector('h1')?.innerText ?? '';
-    
-    // Get all script tags that use src, and convert them into html strings
-    const allScriptTagsThatUseSrc = Array.from(doc.querySelectorAll('script[src]')).map(script => script.outerHTML);
-    const allStyleTagsThatUseHref = Array.from(doc.querySelectorAll('link[rel="stylesheet"][href]')).map(style => style.outerHTML);
 
-    const scripts = doc.querySelectorAll('script, noscript');
-    scripts.forEach(script => script.remove());
-    const styles = doc.querySelectorAll('style, link[rel="stylesheet"]');
-    styles.forEach(style => style.remove());
-    const svgs = doc.querySelectorAll('svg');
-    svgs.forEach(svg => svg.remove());
-    const iframes = doc.querySelectorAll('iframe');
-    iframes.forEach(iframe => iframe.remove());
-    const navs = doc.querySelectorAll('nav');
-    navs.forEach(nav => nav.remove());
-    const footers = doc.querySelectorAll('footer');
-    footers.forEach(footer => footer.remove());
+    const article = new Readability(doc, {
+        charThreshold: 0,
+    }).parse();
 
+    // Content as markdown
     const turndownService = new TurndownService()
-    const markdown = turndownService.turndown(doc.body.innerHTML).trim().substring(0, 10000);
+    const markdown = turndownService.turndown(article?.content ?? '').trim().substring(0, 100000);
     
     return {
-        webPageUrl: tab.url ?? '',
-        webPageScripts: allScriptTagsThatUseSrc,
-        webPageStyles: allStyleTagsThatUseHref,
-        webPageTitle: title,
-        webPageMetaDescription: description,
-        webPageHeading: h1,
-        webPageBody: markdown,
-    };
+        websiteContext: {
+            url: tab.url,
+            name: (article?.siteName ?? '').replace(/\s\s+/g, ' '),
+            title: title,
+            metaDescription: description,
+        },
+        websiteContent: {
+            h1: (article?.title ?? '').replace(/\s\s+/g, ' '),
+            content: markdown.replace(/\s\s+/g, ' '),
+            byline: (article?.byline ?? '').replace(/\s\s+/g, ' '),
+        }
+    }
 }
 
-async function askGPT(prompt: string) {
+async function getHighlightedText() {
+    const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+    
+    const [res] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id as number },
+        func: () => window.getSelection()?.toString() ?? '',
+    });
+
+    return res.result;
+}
+
+async function handleQuickActionClick(p: string) {
+    prompt.value = p
+    await askGPT();
+}
+
+async function askGPT() {
+    if (pending.value)
+        return;
+
     const webPageContent = await getWebPageContent();
-    console.log(webPageContent);
 
-    chatMessages.value.push({
-        id: uuid(),
-        text: prompt,
-        state: 'success',
-        createdAt: new Date(),
+    //if (appStore.analysisMode === 'HIGHLIGHTED_TEXT') {
+    //    const highlightedText = await getHighlightedText();
+    //    webPageContent.websiteContent.content = highlightedText;
+    //}
+
+    const promptValue = prompt.value.trim();
+    prompt.value = '';
+
+    // Push user message
+    await appStore.createChatMessage({
+        threadId: activeThread.value,
         sender: 'user',
-    });
+        state: 'success',
+        text: promptValue,
+    })
 
-    chatMessages.value.push({
-        id: uuid(),
-        text: '',
-        state: 'pending',
-        createdAt: new Date(),
+    // Push bot message as pending
+    const { id: botMessageId } = await appStore.createChatMessage({
+        threadId: activeThread.value,
         sender: 'bot',
-    });
-
-    const completion = await openai.value.createChatCompletion({
-        model: "gpt-3.5-turbo",
-        temperature: 0.7,
-        max_tokens: 500,
-        messages: [
-            { 
-                role: 'system',
-                content: 'You will be provided information about a web page. The user will ask you questions about the page and you will answer them. Use markdown to format your response with headings, bullet points, etc. When including links, use the full link for the relative path and ensure to format as markdown.'
-            },
-            {
-                role: 'system',
-                content: `Here is the information about the page: 
-                    """{
-                        webPageURL: "${webPageContent.webPageUrl}",
-                        webPageTitle: "${webPageContent.webPageTitle}",
-                        webPageMetaDescription: "${webPageContent.webPageMetaDescription}",
-                        webPageHeading: "${webPageContent.webPageHeading}",
-                        webPageBody: "${webPageContent.webPageBody}"
-                    }"""`
-            },
-            {
-                role: 'user',
-                content: prompt
-            }
-        ],
+        state: 'pending',
+        text: '',
     });
     
-    chatMessages.value[chatMessages.value.length - 1].text = completion.data.choices[0].message?.content ?? '';
-    chatMessages.value[chatMessages.value.length - 1].state = 'success';
+    // Scroll to bottom of chatWindow
+    if (chatWindowWrapper.value)
+        chatWindowWrapper.value.scrollTop = chatWindowWrapper.value.scrollHeight;
+
+    try {
+        const completion = await openai.value.createChatCompletion({
+            model: "gpt-3.5-turbo",
+            temperature: 0.4,
+            messages: [
+                { 
+                    role: 'system',
+                    content: generatePrompt()
+                },
+                {
+                    role: 'system',
+                    content: `Here is the information about the page: """${JSON.stringify(webPageContent)}"""`
+                },
+                {
+                    role: 'user',
+                    content: promptValue
+                }
+            ],
+        })
+
+        await appStore.updateChatMessage({ 
+            id: botMessageId, 
+            text: completion.data.choices[0].message?.content ?? '',
+            state: 'success' 
+        });
+
+    } catch (error: any) {
+
+        let errorMessage = 'Sorry, something went wrong. Please try again.';
+
+        if (!error.response || !error.response.data) {
+            errorMessage = 'Sorry, something went wrong. Please try again.';
+        }
+
+        else if (error.response.status === 400 && error.response.data.error.code === 'context_length_exceeded') {
+            errorMessage = 'Sorry, this web page is too long for me to read. Please select a smaller portion of the web page and try again.';
+        }
+
+        else if (error.response.status === 402 && error.response.data.error.code === 'too_many_requests') {
+            errorMessage = 'Sorry, I am too busy right now. Please try again later.';
+        }
+
+        else if (error.response.status === 402 && error.response.data.error.code === 'insufficient_funds') {
+            errorMessage = 'It looks like you have run out of credits. Please top up your OpenAI account and try again.';
+        }
+
+        // Incorrect api key
+        else if (error.response.status === 401) {
+            errorMessage = 'It looks like your OpenAI API key is mssing or incorrect. Please check your API key and try again.';
+        }
+
+        // Set bot message error
+        await appStore.updateChatMessage({ 
+            id: botMessageId, 
+            text: errorMessage,
+            state: 'error' 
+        });
+    } finally {
+        // Scroll to bottom of chatWindow
+        if (chatWindowWrapper.value)
+            chatWindowWrapper.value.scrollTop = chatWindowWrapper.value.scrollHeight;
+    }
+    
 }
 
-/*onMounted(async () => {
+onMounted(async () => {
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
     if (!tab.id)
         return;
 
-    const [res] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => window.getSelection()?.toString() ?? '',
+    const { id } = await appStore.createChatThread({
+        title: tab.title || '',
+        url: tab.url || '',
+        icon: tab.favIconUrl || '',
     });
 
-    const text = res.result.trim().substring(0, 10000);
+    activeThread.value = id;
 
-    if (text.length === 0)
-        return;
-
-    try {
-
-        const message: ChatMessage = {
-            id: uuid(),
-            text: text,
-            state: 'pending',
-            createdAt: new Date(),
-            sender: 'bot',
-        };
-
-        chatMessages.value.push(message);
-
-        const completion = await openai.value.createChatCompletion({
-            model: "gpt-3.5-turbo",
-            temperature: 0.7,
-            max_tokens: 1000,
-            messages: [
-                { 
-                    role: 'system',
-                    content: 'You are a text summarizer. The user provides you with some text and you respond ONLY with the summary text. Use markdown to format your response with headings, bullet points, etc.'
-                },
-                {
-                    role: 'user',
-                    content: text
-                }
-            ],
-        });
-
-        chatMessages.value[chatMessages.value.length - 1].text = completion.data.choices[0].message?.content ?? '';
-        chatMessages.value[chatMessages.value.length - 1].state = 'success';
-
-    } catch (error: any) {
-        generatedError.value = error.response
-    }
-})*/
+    // Scroll to bottom of chatWindow
+    if (chatWindowWrapper.value)
+        chatWindowWrapper.value.scrollTop = chatWindowWrapper.value.scrollHeight;
+})
 
 </script>
 <template>
     <div class="w-full h-full overflow-hidden">
+        <div class="h-12 bg-gray-50 border-b border-b-gray-200"></div>
+        <!--
         <TitleBar>
             <template #title>
                 <div class="flex items-center gap-4">
@@ -196,19 +218,107 @@ async function askGPT(prompt: string) {
                 </div>
             </template>
         </TitleBar>
-        <div class="flex-shrink w-full h-[calc(100%-8rem)]">
+        -->
+        <!--
+        <div class="flex items-center h-12 px-4 gap-4 bg-gray-100">
+            <div>
+                <p class="text-sm text-gray-700 font-medium">Analysis Mode:</p>
+            </div>
+            <div class="ml-auto">
+                <div class="flex bg-gray-300 rounded-lg transition p-1 dark:bg-gray-700 dark:hover:bg-gray-600">
+                    <nav class="flex space-x-2">
+                        <button
+                            @click="() => updateAnalysisMode('WEB_PAGE')"
+                            class="py-1 px-3 inline-flex items-center gap-2 text-sm text-gray-700 font-medium rounded-md transition-all"
+                            :class="appStore.analysisMode === 'WEB_PAGE' ? 'bg-white shadow-sm' : 'bg-transparent shadow-none'"
+                        >
+                            Web Page
+                        </button>
+                        <button
+                            @click="() => updateAnalysisMode('HIGHLIGHTED_TEXT')" 
+                            class="py-1 px-3 inline-flex items-center gap-2 text-sm text-gray-500 font-medium rounded-md transition-all" 
+                            :class="appStore.analysisMode === 'HIGHLIGHTED_TEXT' ? 'bg-white shadow-sm' : 'bg-transparent shadow-none'"
+                        >
+                            Selected Text
+                        </button>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        -->
+        <div ref="chatWindowWrapper" class="flex-shrink w-full h-[calc(100%-8rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
             <ChatWindow
-                v-if="chatMessages.length > 0"
-                :messages="chatMessages"
+                v-if="appStore.chatThreads.length > 0"
+                :threads="appStore.chatThreads"
+                :messages="appStore.chatMessages"
             />
         </div>
-        <div class="h-16">
+        <!--
+        <div class="flex items-center gap-4 px-4 h-16 bg-white border-t border-t-gray-100">
+                <div class="flex bg-gray-300 rounded-lg transition p-1 dark:bg-gray-700 dark:hover:bg-gray-600">
+                    <nav class="flex gap-2">
+                        <button
+                            @click="() => appStore.setAnalysisMode('WEB_PAGE')"
+                            class="py-1 px-3 whitespace-nowrap w-full items-center gap-2 text-sm text-gray-700 font-medium rounded-md transition-all"
+                            :class="appStore.analysisMode === 'WEB_PAGE' ? 'bg-white shadow-sm' : 'bg-transparent shadow-none'"
+                        >
+                            Analyse Web Page
+                        </button>
+                        <button
+                            @click="() => appStore.setAnalysisMode('SELECTED_TEXT')" 
+                            class="py-1 px-3 whitespace-nowrap items-center gap-2 text-sm text-gray-500 font-medium rounded-md transition-all" 
+                            :class="appStore.analysisMode === 'SELECTED_TEXT' ? 'bg-white shadow-sm' : 'bg-transparent shadow-none'"
+                        >
+                            Analyse Selected Text
+                        </button>
+                    </nav>
+                </div>
+        </div>-->
+        <div class="flex items-center gap-2 h-20 pr-4 bg-white border-t border-t-gray-100 shadow">
             <input 
-                placeholder="Type something..."
+                :disabled="pending"
+                v-model="prompt"
+                placeholder="Type your question here..."
                 type="text" 
-                class="w-full h-16 px-4 py-2 text-gray-700 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500" 
-                @keyup.enter="(e) => askGPT(e.target?.value ?? '')"
+                style="box-shadow: none!important;"
+                class="w-full h-full !pl-4 !pr-2 py-2 text-gray-700 !font-normal !bg-white !text-base tracking-normal appearance-none !shadow-none !outline-none !border-none !rounded-none focus:bg-white focus:!outline-none focus:!border-none focus:!shadow-none" 
+                @keyup.enter="(e) => askGPT()"
             />
+            <div class="flex items-center">
+                <button 
+                    :disabled="pending"
+                    title="Send or send with highlighted text only" 
+                    @click="askGPT" 
+                    class="btn btn--primary !h-10 !py-0 whitespace-nowrap rounded-r-none"
+                >
+                    SEND
+                </button>
+                <button 
+                    :disabled="pending"
+                    title="Send or send with highlighted text only" 
+                    class="btn btn--primary !h-10 !py-0 !px-2 whitespace-nowrap rounded-l-none border-l border-l-primary-300"
+                >
+                    <IconChevron class="w-4 h-4" />
+                </button>
+            </div>
+            <div class="shrink-0">
+                <button
+                    :disabled="pending"
+                    class="btn btn--secondary flex items-center justify-center !p-0 h-10 !w-10 rounded-full" 
+                    title="Quick actions"
+                >
+                    <IconBolt class="w-5 h-5" />
+                </button>
+            </div>
+            <div class="shrink-0">
+                <button 
+                    class="btn btn--secondary flex items-center justify-center !p-0 h-10 !w-10 rounded-full" 
+                    title="Quick actions"
+                    @click="router.push('/settings')"
+                >
+                    <IconSettings class="w-5 h-5" />
+                </button>
+            </div>
         </div>
     </div>
 </template>

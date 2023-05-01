@@ -27,7 +27,8 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "contextMenus"
   ],
   "version": "1.0.0",
   "web_accessible_resources": [

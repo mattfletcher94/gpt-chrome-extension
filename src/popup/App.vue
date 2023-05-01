@@ -14,7 +14,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-[420px] h-[540px] overflow-hidden">
+  <div class="w-[420px] h-[540px] overflow-hidden !text-base">
     <!-- Router view with transitions -->
     <router-view v-if="appReady" v-slot="{ Component }">
       <transition name="page" mode="out-in">
