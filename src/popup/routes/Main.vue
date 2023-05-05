@@ -84,7 +84,7 @@ function settings() {
             <div>
 
                 <!-- You need to configure your open ai api key -->
-                <div v-if="!appStore.openAIAPIKey" class="w-full border border-red-800 bg-red-50 px-4 py-2 rounded-lg dark:bg-gray-800 ">
+                <div v-if="!appStore.getOpenaiKey()" class="w-full border border-red-800 bg-red-50 px-4 py-2 rounded-lg dark:bg-gray-800 ">
                     <div class="flex items-start gap-2">
                         <div>
                             <IconError class="block w-6 h-6 text-red-800" />

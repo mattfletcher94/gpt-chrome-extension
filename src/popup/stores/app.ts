@@ -1,13 +1,15 @@
 import { defineStore } from 'pinia'
 import { ChatThread, ChatMessage, ChatThreadCreate, ChatThreadUpdate, ChatThreadDelete, ChatMessageCreate, ChatMessageDelete, ChatMessageUpdate } from '../types/ChatThread';
 import { v4 as uuidv4 } from 'uuid'
+import { QuickPrompt, QuickPromptCreate, QuickPromptUpdate } from '../types/QuickPrompt';
+import { generateDefaultQuickPrompts } from '../data/defaults';
 
 export const useAppStore = defineStore('app', {
     state: () => ({ 
         openaiKey: '',
-        analysisMode: 'WEB_PAGE' as 'WEB_PAGE' | 'SELECTED_TEXT',
         chatThreads: [] as ChatThread[],
         chatMessages: [] as ChatMessage[],
+        quickPrompts: [] as QuickPrompt[],
     }),
     getters: {
         getOpenaiKey: state => () => state.openaiKey,
@@ -17,32 +19,39 @@ export const useAppStore = defineStore('app', {
         getChatMessages: state => () => state.chatMessages,
         getChatMessage: state => (messageId: string) => state.chatMessages.find((m) => m.id === messageId),
         isPending: state => () => state.chatMessages.some((m) => m.state === 'pending'),
+        getQuickPrompts: state => () => state.quickPrompts,
+        getQuickPrompt: state => (quickPromptId: string) => state.quickPrompts.find((q) => q.id === quickPromptId),
     },
     actions: {
         async init() {
             const result = await chrome.storage.local.get({
                 openaiKey: '', 
-                analysisMode: 'WEB_PAGE',
                 chatThreads: [] as ChatThread[],
                 chatMessages: [] as ChatMessage[],
+                quickPrompts: generateDefaultQuickPrompts(),
             });
             const openaiKey = result?.openaiKey || '';
-            const analysisMode = result?.analysisMode || 'WEB_PAGE';
             const chatThreads = (result?.chatThreads || []);
             const chatMessages = (result?.chatMessages || []);
+            const quickPrompts = (result?.quickPrompts || generateDefaultQuickPrompts());
             this.openaiKey = openaiKey;
+
             this.chatThreads = typeof chatThreads === 'string' ? JSON.parse(chatThreads) : chatThreads; 
             this.chatMessages = typeof chatMessages === 'string' ? JSON.parse(chatMessages) : chatMessages;
-            this.analysisMode = analysisMode;
+            // Resolve any pending chat messages and mark them as failed
+            this.chatMessages = this.chatMessages.map((m) => {
+                if (m.state === 'pending') {
+                    return { ...m, state: 'error', text: 'Sorry, the extension was closed while waiting for a response.' };
+                }
+                return m;
+            });
+            
+            this.quickPrompts = typeof quickPrompts === 'string' ? JSON.parse(quickPrompts) : quickPrompts;
         },
         // Create crud actions for openaiKey
         async setOpenaiKey(key: string) {
             await chrome.storage.local.set({ openaiKey: key });
             this.openaiKey = key;
-        },
-        async setAnalysisMode(mode: 'WEB_PAGE' | 'SELECTED_TEXT') {
-            await chrome.storage.local.set({ analysisMode: mode });
-            this.analysisMode = mode;
         },
         // Create crud actions for chatThreads
         async createChatThread(thread: ChatThreadCreate) {
@@ -89,6 +98,24 @@ export const useAppStore = defineStore('app', {
         async deleteChatMessage(messageId: string) {
             this.chatMessages = this.chatMessages.filter((m) => m.id !== messageId);
             await chrome.storage.local.set({ chatMessages: JSON.stringify(this.chatMessages) });
+        },
+        // Crud actions for quickPrompts
+        async createQuickPrompt(quickPrompt: QuickPromptCreate) {
+            const newQuickPrompt = { ...quickPrompt, id: uuidv4(), createdAt: new Date().toISOString() };
+            await chrome.storage.local.set({ quickPrompts: JSON.stringify([...this.quickPrompts, newQuickPrompt]) });
+            this.quickPrompts.push(newQuickPrompt);
+            return newQuickPrompt;
+        },
+        async updateQuickPrompt(quickPrompt: QuickPromptUpdate) {
+            const index = this.quickPrompts.findIndex((q) => q.id === quickPrompt.id);
+            const updatedQuickPrompt = { ...this.quickPrompts[index], ...quickPrompt, dateUpdated: new Date().toISOString() };
+            this.quickPrompts[index] = updatedQuickPrompt;
+            await chrome.storage.local.set({ quickPrompts: JSON.stringify(this.quickPrompts) });
+            return updatedQuickPrompt;
+        },
+        async deleteQuickPrompt(quickPromptId: string) {
+            this.quickPrompts = this.quickPrompts.filter((q) => q.id !== quickPromptId);
+            await chrome.storage.local.set({ quickPrompts: JSON.stringify(this.quickPrompts) });
         },
     }
 });

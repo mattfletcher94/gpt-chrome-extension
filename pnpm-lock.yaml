@@ -4,6 +4,7 @@ specifiers:
   '@crxjs/vite-plugin': ^1.0.12
   '@headlessui/vue': ^1.7.13
   '@mozilla/readability': ^0.4.4
+  '@popperjs/core': ^2.11.7
   '@tailwindcss/forms': ^0.5.3
   '@tailwindcss/typography': ^0.5.9
   '@types/chrome': ^0.0.233
@@ -28,6 +29,7 @@ specifiers:
 dependencies:
   '@headlessui/vue': 1.7.13_vue@3.2.47
   '@mozilla/readability': 0.4.4
+  '@popperjs/core': 2.11.7
   '@tailwindcss/forms': 0.5.3_tailwindcss@3.3.1
   floating-vue: 2.0.0-beta.20_vue@3.2.47
   marked: 4.3.0
@@ -404,6 +406,10 @@ packages:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.15.0
+
+  /@popperjs/core/2.11.7:
+    resolution: {integrity: sha512-Cr4OjIkipTtcXKjAsm8agyleBuDHvxzeBoa1v543lbv1YaIwQjESsVcmjiWiPEbC1FIeHOG/Op9kdCmAmiS3Kw==}
+    dev: false
 
   /@rollup/pluginutils/4.2.1:
     resolution: {integrity: sha512-iKnFXr7NkdZAIHiIWE+BX5ULi/ucVFYWD6TbAV+rZctiRTY2PL6tsIKhoIOaoskiWAkgu+VsbXgUVDNLHf+InQ==}

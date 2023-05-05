@@ -12,11 +12,12 @@ import IconBolt from '../components/IconBolt.vue';
 import IconChevron from '../components/IconChevron.vue';
 import IconInfo from '../components/IconInfo.vue';
 import IconCheck from '../components/IconCheck.vue';
-import Popover from '../components/Popover.vue';
+import PopoverQuickPrompts from '../components/PopoverQuickPrompts.vue';
 import { Readability } from '@mozilla/readability'
 // @ts-expect-error missing types
 import TurndownService from 'turndown'
 import { generatePrompt } from '../prompts';
+import { QuickPrompt } from '../types/QuickPrompt';
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -82,8 +83,8 @@ async function getSelectedText() {
     return res.result.trim();
 }
 
-async function handleQuickActionClick(p: string) {
-    prompt.value = p
+async function runQuickPrompt(p: QuickPrompt) {
+    prompt.value = p.prompt;
     await askGPT();
 }
 
@@ -95,11 +96,14 @@ async function askGPT() {
 
     // IF THER IS A SELECTION, USE THAT AS THE PROMPT.
     // JUST MAKE SURE THE USER KNOWS THIS.
-
-    //if (appStore.analysisMode === 'HIGHLIGHTED_TEXT') {
-    //    const highlightedText = await getHighlightedText();
-    //    webPageContent.websiteContent.content = highlightedText;
-    //}
+    const highlightedText = await getSelectedText()
+    const highlightedTextTrimmed = highlightedText.trim();
+    console.log('highlightedText', highlightedText)
+    console.log('highlightedTextTrimmed', highlightedTextTrimmed)
+    selectedText.value = highlightedTextTrimmed;
+    if (selectedText.value.length > 0) {
+        webPageContent.websiteContent.content = selectedText.value;
+    }
 
     const promptValue = prompt.value.trim();
     prompt.value = '';
@@ -127,7 +131,7 @@ async function askGPT() {
     try {
         const completion = await openai.value.createChatCompletion({
             model: "gpt-3.5-turbo",
-            temperature: 0.4,
+            temperature: 0.7,
             messages: [
                 { 
                     role: 'system',
@@ -208,7 +212,8 @@ onMounted(async () => {
     activeThread.value = id;
 
     // Get selected text
-    selectedText.value = await getSelectedText();
+    const highlightedText = await getSelectedText()
+    selectedText.value = highlightedText.trim();
 
     // Scroll to bottom of chatWindow
     await nextTick() 
@@ -345,17 +350,20 @@ onMounted(async () => {
                 </button>
             </div>
             <div class="shrink-0">
-                <Popover>
+                <PopoverQuickPrompts 
+                    @prompt="(prompt) => runQuickPrompt(prompt)"
+                    @manage="() => router.push('/quick-prompts')"
+                >
                     <template #button>
                         <button
                             :disabled="pending"
                             class="btn btn--secondary flex items-center justify-center !p-0 h-10 !w-10 rounded-full" 
-                            v-tooltip="{ content: 'Quick actions' }"
+                            v-tooltip="{ content: 'Quick prompts' }"
                         >
                             <IconBolt class="w-5 h-5" />
                         </button>
                     </template>
-                </Popover>
+                </PopoverQuickPrompts>
             </div>
         </div>
     </div>

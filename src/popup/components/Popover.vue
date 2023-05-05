@@ -1,39 +1,108 @@
-<script lang="ts" setup>
-import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue'
+<script setup lang="ts">
+import {
+  Popover,
+  PopoverButton,
+  PopoverOverlay,
+  PopoverPanel,
+} from '@headlessui/vue'
+import type { PropType } from 'vue'
+import { usePopper } from '../composables/usePopper'
 
+const props = defineProps({
+  width: {
+    type: String,
+    default: '300px',
+  },
+  anchor: {
+    type: String as PropType<'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end'>,
+    default: 'bottom',
+  },
+  triggerClass: {
+    type: String,
+    default: '',
+  },
+})
+
+const [trigger, container] = usePopper({
+  placement: props.anchor,
+  strategy: 'fixed',
+  modifiers: [
+    {
+      name: 'offset',
+      options: {
+        offset: [6, 6],
+      },
+    },
+    {
+      name: 'preventOverflow',
+      options: {
+        padding: 6,
+      },
+    },
+    {
+      name: 'flip',
+      options: {
+        padding: 6,
+      },
+    },
+  ],
+})
+
+const resolveTransformOrigin = (anchor: typeof props.anchor) => {
+  if (anchor === 'bottom')
+    return '50% 0%'
+  if (anchor === 'bottom-start')
+    return '0% 0%'
+  if (anchor === 'bottom-end')
+    return '100% 0%'
+  if (anchor === 'top')
+    return '50% 100%'
+  if (anchor === 'top-start')
+    return '0% 100%'
+  if (anchor === 'top-end')
+    return '100% 100%'
+  return '50% 0%'
+}
 </script>
 
 <template>
-  <div class="">
-    <Popover v-slot="{ open }" class="relative">
-      <PopoverButton
-      >
-          <slot name="button" />
-      </PopoverButton>
-
-      <transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="translate-y-1 opacity-0"
-        enter-to-class="translate-y-0 opacity-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="translate-y-0 opacity-100"
-        leave-to-class="translate-y-1 opacity-0"
-      >
-        <PopoverPanel
-          class="absolute top-0 right-0 transform translate-y-[-100%] z-10 px-4 w-60"
+  <Popover class="relative inline" as="div">
+    <PopoverButton ref="trigger" as="button" :class="props.triggerClass">
+      <slot name="trigger" />
+    </PopoverButton>
+    <Teleport to="body">
+      <PopoverPanel>
+        <div
+          ref="container"
+          class="fixed w-screen  focus:outline-none z-[99999]"
+          :style="{
+            'max-width': props.width,
+          }"
         >
-          <div
-            class="w-full overflow-hidden bg-white opacity-90 backdrop-blur-md rounded-lg shadow-lg ring-1 ring-black ring-opacity-5"
-          >
-            <div class="text-sm font-medium flex items-center p-4 border-b border-b-gray-200">
-              Summarise
-            </div> 
-            <div class="text-sm font-medium flex items-center p-4 border-b border-b-gray-200">
-              Find Links
+          <Transition appear mode="out-in" name="popover">
+            <div
+              class="bg-white bg-opacity-90 backdrop-filter backdrop-blur rounded-md shadow-lg ring-1 ring-black ring-opacity-5"
+              :style="{
+                'transform-origin': resolveTransformOrigin(props.anchor),
+              }"
+            >
+              <slot name="content" />
             </div>
-          </div>
-        </PopoverPanel>
-      </transition>
-    </Popover>
-  </div>
+          </transition>
+        </div>
+      </PopoverPanel>
+    </Teleport>
+  </Popover>
 </template>
+
+<style scoped>
+.popover-enter-active,
+.popover-leave-active {
+  transition: opacity 200ms, transform 200ms ease;
+}
+.popover-enter-from,
+.popover-leave-to {
+  opacity: 0;
+  transform: scale(0.75);
+}
+</style>
