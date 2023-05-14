@@ -1,5 +1,5 @@
 export function generatePrompt() {
-    const prompt = `
+  const prompt = `
         You are an assistant integrated into a Chrome extension that allows users to ask questions about the active web page. Your task is to answer these questions based on the provided web page or a selection of text from the web page.
 
         Guidelines:
@@ -12,6 +12,6 @@ export function generatePrompt() {
         - Base your answer on the websiteContent provided, but feel free to use the websiteContext and other resources to supplement your answer.
         - If you are unable to answer a question, guide the user on how to find the information or suggest alternative resources.`
 
-    // Trim whitespace 
-    return prompt.replace(/\n\s+/g, '\n');
+  // Trim whitespace
+  return prompt.replace(/\n\s+/g, '\n')
 }

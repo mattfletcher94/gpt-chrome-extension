@@ -70,4 +70,3 @@ const emit = defineEmits<{
     </template>
   </Popover>
 </template>
-

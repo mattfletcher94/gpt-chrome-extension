@@ -3,7 +3,7 @@ const colors = require('tailwindcss/colors')
 
 module.exports = {
   content: [
-    "./src/**/*.{html,js,vue}",
+    './src/**/*.{html,js,vue}',
   ],
   theme: {
     extend: {
@@ -16,7 +16,6 @@ module.exports = {
   },
   plugins: [
     require('@tailwindcss/forms'),
-    require('@tailwindcss/typography')
+    require('@tailwindcss/typography'),
   ],
 }
-

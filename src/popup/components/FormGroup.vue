@@ -23,14 +23,13 @@ const props = defineProps({
     default: false,
   },
 })
-
 </script>
 
 <template>
   <div
-    class="form-group input-text-wrap relative block w-full" 
+    class="form-group input-text-wrap relative block w-full"
     :class="{
-      'form-group--required': required
+      'form-group--required': required,
     }"
   >
     <label v-if="props.title || $slots.title" class="relative block w-full font-medium text-base" :for="props.for">
@@ -42,8 +41,8 @@ const props = defineProps({
       </span>
     </label>
     <div
-      v-if="props.description || $slots.description" 
-      class="relative block w-full font-normal mt-2 leading-tight" 
+      v-if="props.description || $slots.description"
+      class="relative block w-full font-normal mt-2 leading-tight"
       :class="{
         'text-gray-700': props.state === '',
         'text-red-500': props.state === 'error',
@@ -62,6 +61,7 @@ const props = defineProps({
     </div>
   </div>
 </template>
+
 <style scoped>
 .form-group--required label span:nth-child(1)::after {
   content: '*';

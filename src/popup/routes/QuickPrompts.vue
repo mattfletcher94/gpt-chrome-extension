@@ -1,49 +1,51 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import TitleBar from '../components/TitleBar.vue'
-import { computed, nextTick, onUnmounted, ref } from 'vue'
+import { nextTick, ref } from 'vue'
+import { v4 as uuidv4 } from 'uuid'
+import type { QuickPrompt } from '../stores/app'
 import { useAppStore } from '../stores/app'
-import FormGroup from '../components/FormGroup.vue'
-import IconBolt from '../components/IconBolt.vue'
-import Checkbox from '../components/Checkbox.vue'
 import PopoverConfirm from '../components/PopoverConfirm.vue'
 import IconBin from '../components/IconBin.vue'
+import IconMenu from '../components/IconMenu.vue'
+import IconBolt from '../components/IconBolt.vue'
 
-const router = useRouter()
 const appStore = useAppStore()
 
 const list = ref<HTMLDivElement>()
-const createdPrompts = ref<string[]>([])
 
-const prompts = computed(() => appStore.quickPrompts)
+const prompts = ref<Array<QuickPrompt & { deleted?: boolean }>>(JSON.parse(JSON.stringify(appStore.quickPrompts)))
+const savingText = ref('Save changes')
 
 function handleDeletePrompt(promptId: string) {
-  appStore.deleteQuickPrompt(promptId)
+  const prompt = prompts.value.find(p => p.id === promptId)
+  if (!prompt)
+    return
+  prompt.deleted = true
 }
 
 function handleEditPromptTitle(promptId: string, title: string) {
-  appStore.updateQuickPrompt({
-    id: promptId,
-    title: title.trim() || 'Unamed prompt',
-  })
+  if (title.trim() === '')
+    return
+  const prompt = prompts.value.find(p => p.id === promptId)
+  if (!prompt)
+    return
+
+  prompt.title = title.trim() || 'Unamed prompt'
 }
 
 function handleEditPromptPrompt(promptId: string, prompt: string) {
-  appStore.updateQuickPrompt({
-    id: promptId,
-    prompt,
-  })
+  const promptObj = prompts.value.find(p => p.id === promptId)
+  if (!promptObj)
+    return
+  promptObj.prompt = prompt
 }
 
-
-const handleCreateQuickPromptClick = async () => {
-
-  const createdPrompt = await appStore.createQuickPrompt({
+async function handleCreateQuickPromptClick() {
+  prompts.value.push({
+    id: uuidv4(),
     title: 'New prompt',
     prompt: '',
+    createdAt: new Date().toISOString(),
   })
-
-  createdPrompts.value.push(createdPrompt.id)
 
   // Find last input and focus it
   await nextTick()
@@ -55,126 +57,119 @@ const handleCreateQuickPromptClick = async () => {
   }
 }
 
-onUnmounted(() => {
-  createdPrompts.value.forEach(async (id) => {
-    const prompt = appStore.quickPrompts.find((p) => p.id === id)
-    if (!prompt)
-      return
+async function handleSaveChanges() {
+  const existsingPrompts = appStore.quickPrompts
+  const deletedPrompts = prompts.value.filter(p => p.deleted === true)
+  const updatedPrompts = prompts.value.filter(p => p.deleted !== true && existsingPrompts.find(ep => ep.id === p.id))
+  const createdPrompts = prompts.value.filter(p => p.deleted !== true && !existsingPrompts.find(ep => ep.id === p.id))
 
-    if (prompt.title === 'New prompt' && prompt.prompt === '') {
-      await appStore.deleteQuickPrompt(prompt.id)
-    }
-  })
-})
+  // First, delete all deleted prompts
+  await Promise.all(deletedPrompts.map(p => appStore.deleteQuickPrompt(p.id)))
 
-</script>
-<template>
-    <div class="w-full h-full overflow-hidden">
-        <TitleBar :back-button="() => router.push('/')">
-            <template #title>
-                <div class="w-full flex items-center justify-between gap-2">
-                    <div>
-                        Manage Quick Prompts
-                    </div>
-                </div>
-            </template>
-        </TitleBar>
-        <div class="block w-full overflow-x-hidden overflow-y-auto h-[calc(100%-4rem)]">
-          <ul ref="list" class="flex flex-col gap-2 w-full">
-            <li
-              v-for="prompt in prompts"
-              :key="prompt.id"
-              class="flex items-center px-6 py-4 gap-4 border-b border-b-gray-200"
-            >
-              <div class="w-full">
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-medium shrink-0 w-20">Title:</p>
-                  <input
-                    placeholder="Edit label title"
-                    type="text"
-                    :value="prompt.title"
-                    @blur="(e: any) => handleEditPromptTitle(prompt.id, e.target?.value || '')"
-                  >
-                </div>
-                <div class="flex items-start gap-2 mt-4">
-                  <p class="text-sm font-medium shrink-0 w-20">Prompt:</p>
-                  <textarea
-                    class="resize-none w-full"
-                    placeholder="Edit label title"
-                    :rows="2"
-                    :value="prompt.prompt"
-                    @blur="(e: any) => handleEditPromptPrompt(prompt.id, e.target?.value || '')"
-                  />
-                </div>
-              </div>
-              <div class="shrink-0">
-                <PopoverConfirm
-                  trigger-class="btn btn--light !px-2 !text-slate-500 !py-0 !h-8"
-                  message="Are you sure you want to delete this quick prompt?"
-                  width="240px"
-                  confirm-text="Delete"
-                  cancel-text="Cancel"
-                  @confirm="() => handleDeletePrompt(prompt.id)"
-                >
-                  <template #trigger>
-                    <IconBin class="w-4 h-4" />
-                  </template>
-                </PopoverConfirm>
-              </div>
-            </li>
-          </ul>
+  // Upadte any prompts that are existing in store
+  await Promise.all(updatedPrompts.map(p => appStore.updateQuickPrompt({
+    id: p.id,
+    title: p.title,
+    prompt: p.prompt,
+  })))
 
-          <div class="px-4 pb-4">
-            <div class="block pt-4">
-              <button 
-                class="btn btn--gray w-full"
-                @click="handleCreateQuickPromptClick"
-              >
-                  Add quick prompt
-                </button>
-            </div>
-            <div class="block pt-4">
-              <button 
-                class="btn btn--primary w-full"
-                @click="router.push('/')"
-              >
-                  Done
-                </button>
-            </div>
-          </div>
+  // Create any prompts that are not existing in store
+  await Promise.all(createdPrompts.map(p => appStore.createQuickPrompt({
+    title: p.title,
+    prompt: p.prompt,
+  })))
 
-          <!--
-            <div
-              v-for="prompt in promptsSorted"
-              :key="prompt.id"
-              class="flex items-center w-full px-6 py-4 border-b border-b-gray-200"
-            >
-              <div class="w-full">
-                <p class="font-medium b-1">{{ prompt.title }}</p>
-                <p class="text-sm text-gray-600">
-                  {{ prompt.prompt }}
-                </p>
-              </div>
-              <div class="shrink-0">
-                Hello
-              </div>
-            </div>
-          -->
-            <!--
-            <div class="px-4 pb-4">
-              <div class="block pt-4 border-t botder-t-gray-200">
-                <button 
-                  class="btn btn--secondary w-full"
-                >
-                    Manage quick prompts
-                  </button>
-              </div>
-            </div>
-            -->
-          </div>
-    </div>
-</template>
-<style scoped>
-.label-textfield {
+  savingText.value = 'Saved!'
+  setTimeout(() => {
+    savingText.value = 'Save changes'
+  }, 1000)
 }
-</style>
+</script>
+
+<template>
+  <div class="relative flex flex-col w-full h-full overflow-hidden">
+    <div class="absolute top-0 left-0 w-full flex items-center gap-2 h-16 px-4 border-b border-b-gray-200 bg-white/70 backdrop-blur-md rounded-b-2xl z-10">
+      <div class="flex items-center gap-3 font-medium">
+        <div class="shrink-0">
+          <button
+            v-tooltip="{ content: 'Menu' }"
+            class="btn btn--light flex items-center justify-center !p-0 h-10 !w-10 rounded-full"
+            @click="appStore.menuOpen = true"
+          >
+            <IconMenu class="w-5 h-5" />
+          </button>
+        </div>
+        <div class="border-l border-l-gray-300 pl-4">
+          <IconBolt class="w-5 h-5" />
+        </div>
+        <div>
+          Quick Prompts
+        </div>
+      </div>
+    </div>
+    <div class="flex-shrink w-full h-full overflow-y-auto overflow-x-hidden pt-16">
+      <ul ref="list" class="flex flex-col gap-2 w-full">
+        <li
+          v-for="prompt in prompts.filter(p => p.deleted !== true)"
+          :key="prompt.id"
+          class="flex items-center px-6 py-4 gap-4 border-b border-b-gray-200"
+        >
+          <div class="w-full">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-medium shrink-0 w-20">
+                Title:
+              </p>
+              <input
+                placeholder="Edit label title"
+                type="text"
+                :value="prompt.title"
+                @blur="(e: any) => handleEditPromptTitle(prompt.id, e.target?.value || '')"
+              >
+            </div>
+            <div class="flex items-start gap-2 mt-4">
+              <p class="text-sm font-medium shrink-0 w-20">
+                Prompt:
+              </p>
+              <textarea
+                class="resize-none w-full"
+                placeholder="Edit label title"
+                :rows="2"
+                :value="prompt.prompt"
+                @blur="(e: any) => handleEditPromptPrompt(prompt.id, e.target?.value || '')"
+              />
+            </div>
+          </div>
+          <div class="shrink-0">
+            <PopoverConfirm
+              trigger-class="btn btn--light !px-2 !text-slate-500 !py-0 !h-8"
+              message="Are you sure you want to delete this quick prompt?"
+              width="240px"
+              confirm-text="Delete"
+              cancel-text="Cancel"
+              @confirm="() => handleDeletePrompt(prompt.id)"
+            >
+              <template #trigger>
+                <IconBin class="w-4 h-4" />
+              </template>
+            </PopoverConfirm>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <div class="shrink-0 flex items-center justify-end gap-2 p-4 bg-white border-t border-t-gray-100 shadow">
+      <button
+        class="btn btn--gray w-full"
+        @click="handleCreateQuickPromptClick"
+      >
+        Add quick prompt
+      </button>
+      <button
+        class="btn btn--primary w-full"
+        :disabled="savingText !== 'Save changes'"
+        @click="handleSaveChanges()"
+      >
+        {{ savingText }}
+      </button>
+    </div>
+  </div>
+</template>

@@ -1,44 +1,29 @@
 {
+  "manifest_version": 3,
+  "name": "Tab GPT",
+  "version": "1.0.0",
+  "description": "A robust extension utilizing GPT to analyze & perform actions based on your active tab's content, enhancing browsing experience.",
+  "icons": {
+    "16": "logo-16x16.png",
+    "32": "logo-32x32.png",
+    "48": "logo-48x48.png",
+    "128": "logo-128x128.png"
+  },
+  "author": "mattkfletcher94@gmail.com",
   "action": {
     "default_popup": "src/popup/index.html"
   },
-  "background": {
-    "service_worker": "src/background/index.ts",
-    "type": "module"
-  },
-  "content_scripts": [
-    {
-      "all_frames": true,
-      "js": [
-        "src/content-script/index.ts"
-      ],
-      "matches": [
-        "*://*/*"
-      ],
-      "run_at": "document_idle"
-    }
-  ],
-  "host_permissions": [
-    "*://*/*"
-  ],
-  "manifest_version": 3,
-  "name": "chrome-extension",
-  "options_page": "src/options/index.html",
   "permissions": [
     "storage",
     "activeTab",
-    "scripting",
-    "contextMenus"
+    "scripting"
   ],
-  "version": "1.0.0",
   "web_accessible_resources": [
     {
       "matches": [
         "*://*/*"
       ],
-      "resources": [
-        "src/content-script/index.ts"
-      ]
+      "resources": []
     }
   ]
 }

@@ -2,7 +2,6 @@
 import {
   Popover,
   PopoverButton,
-  PopoverOverlay,
   PopoverPanel,
 } from '@headlessui/vue'
 import type { PropType } from 'vue'
@@ -48,7 +47,7 @@ const [trigger, container] = usePopper({
   ],
 })
 
-const resolveTransformOrigin = (anchor: typeof props.anchor) => {
+function resolveTransformOrigin(anchor: typeof props.anchor) {
   if (anchor === 'bottom')
     return '50% 0%'
   if (anchor === 'bottom-start')

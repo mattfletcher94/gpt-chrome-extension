@@ -1,26 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useAppStore } from './stores/app';
+import { onMounted, ref } from 'vue'
+import { useAppStore } from './stores/app'
+import MainMenu from './components/MainMenu.vue'
 
-const store = useAppStore();
-const appReady = ref(false);
+const store = useAppStore()
+const appReady = ref(false)
 
 onMounted(() => {
   store.init().then(() => {
-    appReady.value = true;
-  });
+    appReady.value = true
+  })
 })
-
 </script>
 
 <template>
   <div class="w-[420px] h-[540px] overflow-hidden !text-base">
-    <!-- Router view with transitions -->
-    <router-view v-if="appReady" v-slot="{ Component }">
-      <transition name="page" mode="out-in">
-        <component :is="Component" />
-      </transition>
-    </router-view>
+    <RouterView v-if="appReady" v-slot="{ Component }">
+      <component :is="Component" />
+    </RouterView>
+    <MainMenu
+      :open="store.menuOpen"
+      @close="store.menuOpen = false"
+    />
   </div>
 </template>
 
@@ -39,5 +40,4 @@ onMounted(() => {
   opacity: 0;
   transform: translateY(-4px);
 }
-
 </style>
