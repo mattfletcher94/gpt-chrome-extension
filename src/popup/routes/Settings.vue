@@ -7,12 +7,14 @@ import IconSettings from '../components/IconSettings.vue'
 import IconKey from '../components/IconKey.vue'
 import IconOpen from '../components/IconOpen.vue'
 import IconCheck from '../components/IconCheck.vue'
+import ModalFaqs from '../components/ModalFaqs.vue'
 
 const appStore = useAppStore()
 
 const tempKey = ref('')
 const checkingKey = ref(false)
 const errorMessage = ref('')
+const modalFaqsOpen = ref(false)
 
 async function saveAndVerifyKey() {
   if (checkingKey.value)
@@ -139,9 +141,12 @@ async function saveAndVerifyKey() {
                   <IconOpen class="w-4 h-4" />
                   Get your API key from Open AI
                 </a>
-                <RouterLink class="ml-auto flex items-center gap-2 text-blue-500 text-sm hover:underline" to="/faqs">
+                <button
+                  class="ml-auto flex items-center gap-2 text-blue-500 text-sm hover:underline"
+                  @click="modalFaqsOpen = true"
+                >
                   Read FAQ's
-                </RouterLink>
+                </button>
               </div>
             </div>
           </div>
@@ -248,34 +253,9 @@ async function saveAndVerifyKey() {
         -->
       </div>
     </div>
+    <ModalFaqs
+      :open="modalFaqsOpen"
+      @close="modalFaqsOpen = false"
+    />
   </div>
-
-  <!--
-    <div class="w-full h-full overflow-x-hidden overflow-y-auto">
-        <TitleBar :back-button="() => router.push('/')">
-            <template #title>
-                <div class="w-full flex items-center justify-between gap-2">
-                    <div>
-                        Settings
-                    </div>
-                </div>
-            </template>
-        </TitleBar>
-        <div class="p-4">
-            <FormGroup
-                title="OpenAI API Key"
-                for="openai-api-key"
-            >
-                <input
-                    id="key"
-                    v-model="key"
-                    type="text"
-                    placeholder="Enter your OpenAI API key"
-                />
-            </FormGroup>
-            <button class="btn btn--primary mt-4 w-full" @click="appStore.setOpenaiKey(key)">
-                Save changes
-            </button>
-        </div>
-    </div> -->
 </template>

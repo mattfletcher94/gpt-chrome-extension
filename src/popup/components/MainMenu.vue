@@ -139,8 +139,10 @@ watch(() => props.open, async (open) => {
                   </router-link>
                 </div>
               </div>
-              <div ref="dialogFooter" class="block w-full p-4 border-t border-t-gray-200">
-                <div class="flex items-center" />
+              <div ref="dialogFooter" class="block w-full p-4  border-t border-t-gray-200">
+                <div class="block text-sm font-medium">
+                  Version 1.0.0
+                </div>
               </div>
             </div>
           </TransitionChild>

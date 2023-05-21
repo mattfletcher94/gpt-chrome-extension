@@ -66,7 +66,7 @@ function resolveTransformOrigin(anchor: typeof props.anchor) {
 
 <template>
   <Popover class="relative inline" as="div">
-    <PopoverButton ref="trigger" as="button" :class="props.triggerClass">
+    <PopoverButton ref="trigger" as="template" :class="props.triggerClass">
       <slot name="trigger" />
     </PopoverButton>
     <Teleport to="body">

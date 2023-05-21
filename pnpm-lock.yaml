@@ -10,6 +10,7 @@ specifiers:
   '@tailwindcss/typography': ^0.5.9
   '@types/chrome': ^0.0.233
   '@types/marked': ^4.0.8
+  '@types/turndown': ^5.0.1
   '@types/uuid': ^9.0.1
   '@vitejs/plugin-vue': ^2.3.3
   autoprefixer: ^10.4.14
@@ -49,6 +50,7 @@ devDependencies:
   '@tailwindcss/typography': 0.5.9_tailwindcss@3.3.1
   '@types/chrome': 0.0.233
   '@types/marked': 4.0.8
+  '@types/turndown': 5.0.1
   '@types/uuid': 9.0.1
   '@vitejs/plugin-vue': 2.3.4_vite@2.9.15+vue@3.2.47
   autoprefixer: 10.4.14_postcss@8.4.23
@@ -642,6 +644,10 @@ packages:
 
   /@types/semver/7.5.0:
     resolution: {integrity: sha512-G8hZ6XJiHnuhQKR7ZmysCeJWE08o8T0AXtk5darsCaTVsYZhhgUrq53jizaR2FvsoeCwJhlmwTjkXBY5Pn/ZHw==}
+    dev: true
+
+  /@types/turndown/5.0.1:
+    resolution: {integrity: sha512-N8Ad4e3oJxh9n9BiZx9cbe/0M3kqDpOTm2wzj13wdDUxDPjfjloWIJaquZzWE1cYTAHpjOH3rcTnXQdpEfS/SQ==}
     dev: true
 
   /@types/unist/2.0.6:

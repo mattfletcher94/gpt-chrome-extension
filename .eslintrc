@@ -3,6 +3,8 @@
   "rules": {
     "no-console": "off",
     "no-alert": "off",
-    "vue/multiline-html-element-content-newline": "off"
+    "vue/multiline-html-element-content-newline": "off",
+    "curly": "off",
+    "antfu/if-newline": "off",
   }
 }

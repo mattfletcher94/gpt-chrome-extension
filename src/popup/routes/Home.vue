@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { Configuration, OpenAIApi } from 'openai'
-import { Readability } from '@mozilla/readability'
-
-// @ts-expect-error missing types
-import TurndownService from 'turndown'
 import { PopoverButton } from '@headlessui/vue'
+import { Readability } from '@mozilla/readability'
+import TurndownService from 'turndown'
 import type { QuickPrompt } from '../stores/app'
 import { useAppStore } from '../stores/app'
 import ChatWindow from '../components/ChatWindow.vue'
@@ -14,92 +11,53 @@ import IconBolt from '../components/IconBolt.vue'
 import IconChevron from '../components/IconChevron.vue'
 import IconInfo from '../components/IconInfo.vue'
 import PopoverQuickPrompts from '../components/PopoverQuickPrompts.vue'
-import { generatePrompt } from '../prompts'
 import IconMenu from '../components/IconMenu.vue'
 import IconEllipsis from '../components/IconEllipsis.vue'
 import Popover from '../components/Popover.vue'
+import { askGPT } from '../services/ai'
+import { webPageContentChromeService } from '../services/webPageContent'
 
+// Composables
 const router = useRouter()
 const appStore = useAppStore()
+
+// Local state
 const hasMounted = ref(false)
+const hasSelectedText = ref(false)
+const hasReceived401 = ref(false)
 const prompt = ref('')
-const selectedText = ref('')
-const invalidKey = ref(false)
+
+// Template refs
+const promptInput = ref<HTMLInputElement>()
 const chatWindowWrapper = ref<HTMLElement>()
 
+// Computed
 const pending = computed(() => appStore.chatMessages.filter(m => m.state === 'pending').length > 0)
+const hasValidKey = computed(() => appStore.getOpenaiKey().length > 0 && !hasReceived401.value)
 
-async function getWebPageContent() {
-  const [tab] = await chrome.tabs.query({ currentWindow: true, active: true })
-
-  const [res] = await chrome.scripting.executeScript({
-    target: { tabId: tab.id as number },
-    func: () => document.querySelector('html')?.innerHTML ?? '',
-  })
-
-  // Parse dom
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(res.result, 'text/html')
-
-  // Get page title, meta description, and h1
-  const title = doc.querySelector('title')?.innerText ?? ''
-  const description = doc.querySelector('meta[name="description"]')?.getAttribute('content') ?? ''
-
-  const article = new Readability(doc, {
-    charThreshold: 0,
-  }).parse()
-
-  // Content as markdown
-  const turndownService = new TurndownService()
-  const markdown = turndownService.turndown(article?.content ?? '').trim().substring(0, 100000)
-
-  return {
-    websiteContext: {
-      url: tab.url,
-      name: (article?.siteName ?? '').replace(/\s\s+/g, ' '),
-      title,
-      metaDescription: description,
-    },
-    websiteContent: {
-      h1: (article?.title ?? '').replace(/\s\s+/g, ' '),
-      content: markdown.replace(/\s\s+/g, ' '),
-      byline: (article?.byline ?? '').replace(/\s\s+/g, ' '),
-    },
-  }
-}
-
-async function getSelectedText() {
-  const [tab] = await chrome.tabs.query({ currentWindow: true, active: true })
-
-  const [res] = await chrome.scripting.executeScript({
-    target: { tabId: tab.id as number },
-    func: () => window.getSelection()?.toString() || '',
-  })
-
-  return res.result.trim()
-}
-
-async function runQuickPrompt(p: QuickPrompt) {
+function handleRunQuickPrompt(p: QuickPrompt) {
   prompt.value = p.prompt
-  await askGPT()
+  handleAskGPT()
 }
 
-async function askGPT() {
-  if (pending.value || !prompt.value.trim())
-    return
+async function handleAskGPT() {
+  if (pending.value || !prompt.value.trim() || !hasValidKey.value) return
 
-  const [tab] = await chrome.tabs.query({ currentWindow: true, active: true })
+  const pageDetails = await webPageContentChromeService.fetchPageDetails()
+  const pageContent = await webPageContentChromeService.fetchPageContent()
+  const pageSelection = await webPageContentChromeService.fetchPageSelection()
 
-  const webPageContent = await getWebPageContent()
+  // Set the selected text value
+  hasSelectedText.value = pageSelection.trim().length > 0
 
-  // IF THER IS A SELECTION, USE THAT AS THE PROMPT.
-  // JUST MAKE SURE THE USER KNOWS THIS.
-  const highlightedText = await getSelectedText()
-  const highlightedTextTrimmed = highlightedText.trim()
-  selectedText.value = highlightedTextTrimmed
-  if (selectedText.value.length > 0)
-    webPageContent.websiteContent.content = selectedText.value
+  // Get article content and convert to markdown
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(pageContent, 'text/html')
+  const article = new Readability(doc, { charThreshold: 0 }).parse()
+  const turndownService = new TurndownService()
+  const pageContentMarkdown = turndownService.turndown(article?.content ?? '').trim().substring(0, 100000)
 
+  // Trim the prompt value and clear the original prompt
   const promptValue = prompt.value.trim()
   prompt.value = ''
 
@@ -109,9 +67,9 @@ async function askGPT() {
     state: 'success',
     text: promptValue,
     tab: {
-      title: tab.title || 'Unkown',
-      url: tab.url || '',
-      icon: (!tab.favIconUrl || tab.favIconUrl.endsWith('.ico')) ? '' : tab.favIconUrl,
+      title: pageDetails.title,
+      url: pageDetails.url,
+      icon: pageDetails.icon,
     },
   })
 
@@ -121,94 +79,66 @@ async function askGPT() {
     state: 'pending',
     text: '',
     tab: {
-      title: tab.title || 'Unkown',
-      url: tab.url || '',
-      icon: (!tab.favIconUrl || tab.favIconUrl.endsWith('.ico')) ? '' : tab.favIconUrl,
+      title: pageDetails.title,
+      url: pageDetails.url,
+      icon: pageDetails.icon,
     },
   })
 
   // Scroll to bottom of chatWindow
-  if (chatWindowWrapper.value)
-    chatWindowWrapper.value.scrollTop = chatWindowWrapper.value.scrollHeight
+  handleScrollToBottom()
 
-  try {
-    const openai = new OpenAIApi(new Configuration({ apiKey: appStore.getOpenaiKey() }))
-    const completion = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      temperature: 0.7,
-      messages: [
-        {
-          role: 'system',
-          content: generatePrompt(),
-        },
-        {
-          role: 'system',
-          content: `Here is the information about the page: """${JSON.stringify(webPageContent)}"""`,
-        },
-        {
-          role: 'user',
-          content: promptValue,
-        },
-      ],
-    })
+  // Ask GPT
+  const { data, error, status } = await askGPT({
+    token: appStore.getOpenaiKey(),
+    prompt: promptValue,
+    content: JSON.stringify({
+      pageDetails,
+      pageContent: hasSelectedText.value ? pageSelection : pageContentMarkdown,
+    }),
+  })
 
+  // If error, set bot message error
+  if (error) {
     await appStore.updateChatMessage({
       id: botMessageId,
-      text: completion.data.choices[0].message?.content ?? '',
-      state: 'success',
-    })
-  }
-  catch (error: any) {
-    let errorMessage = 'Sorry, something went wrong. Please try again.'
-
-    if (!error.response || !error.response.data) {
-      errorMessage = 'Sorry, something went wrong. Please try again.'
-    }
-
-    else if (error.response.status === 400 && error.response.data.error.code === 'context_length_exceeded') {
-      errorMessage = 'Sorry, this web page is too long for me to read. Please select a smaller portion of the web page and try again.'
-    }
-
-    else if (error.response.status === 402 && error.response.data.error.code === 'too_many_requests') {
-      errorMessage = 'Sorry, I am too busy right now. Please try again later.'
-    }
-
-    else if (error.response.status === 402 && error.response.data.error.code === 'insufficient_funds') {
-      errorMessage = 'It looks like you have run out of credits. Please top up your OpenAI account and try again.'
-    }
-
-    // Incorrect api key
-    else if (error.response.status === 401) {
-      invalidKey.value = true
-      errorMessage = 'It looks like your OpenAI API key is mssing or incorrect. Please check your API key and try again.'
-    }
-
-    // Set bot message error
-    await appStore.updateChatMessage({
-      id: botMessageId,
-      text: errorMessage,
+      text: error.message,
       state: 'error',
     })
   }
-  finally {
-    // Scroll to bottom of chatWindow
-    if (chatWindowWrapper.value)
-      chatWindowWrapper.value.scrollTop = chatWindowWrapper.value.scrollHeight
+
+  // If successful
+  if (data) {
+    await appStore.updateChatMessage({
+      id: botMessageId,
+      text: data.answer,
+      state: 'success',
+    })
   }
+
+  hasReceived401.value = status === 401
+
+  // Scroll to bottom of chatWindow
+  handleScrollToBottom()
+}
+
+function handleScrollToBottom() {
+  if (chatWindowWrapper.value)
+    chatWindowWrapper.value.scrollTop = chatWindowWrapper.value.scrollHeight
 }
 
 onMounted(async () => {
   // Get selected text
-  const highlightedText = await getSelectedText()
-  selectedText.value = highlightedText.trim()
+  const pageSelection = await webPageContentChromeService.fetchPageSelection()
+  hasSelectedText.value = pageSelection.trim().length > 0
 
   // Scroll to bottom of chatWindow
   await nextTick()
-
-  if (chatWindowWrapper.value)
-    chatWindowWrapper.value.scrollTop = chatWindowWrapper.value.scrollHeight
-
+  handleScrollToBottom()
   await nextTick()
+
+  // Focus on prompt input
+  if (promptInput.value) promptInput.value.focus()
 
   hasMounted.value = true
 })
@@ -216,6 +146,8 @@ onMounted(async () => {
 
 <template>
   <div class="relative flex flex-col w-full h-full overflow-hidden">
+
+    <!-- Header -->
     <div class="absolute top-0 left-0 w-full flex items-center gap-2 h-16 px-4 border-b border-b-gray-200 bg-white/70 backdrop-blur-md rounded-b-2xl z-10">
       <div class="flex items-center gap-3 font-medium">
         <div class="shrink-0">
@@ -241,7 +173,7 @@ onMounted(async () => {
       <div class="shrink-0 ml-auto">
         <!-- API key status -->
         <div
-          v-if="appStore.getOpenaiKey() && !invalidKey"
+          v-if="hasValidKey"
           v-tooltip="{ content: 'Your OpenAI API key is connected.' }"
           class="flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-gray-500/10 border border-gray-500/20 text-gray-700"
         >
@@ -255,7 +187,7 @@ onMounted(async () => {
           @click="router.push('/settings')"
         >
           <IconInfo class="w-5 h-5 text-red-500" />
-          <span>API key missing</span>
+          <span>API key invalid</span>
           <IconChevron direction="right" class="w-4 h-4" />
         </button>
       </div>
@@ -285,6 +217,8 @@ onMounted(async () => {
         </Popover>
       </div>
     </div>
+
+    <!-- Chat window -->
     <div
       ref="chatWindowWrapper"
       class="flex-shrink w-full h-full overflow-y-auto overflow-x-hidden pt-16"
@@ -296,8 +230,45 @@ onMounted(async () => {
         v-if="appStore.chatMessages.length > 0"
         :chat-messages="appStore.chatMessages"
       />
+
+      <!-- Empty state, API key configured -->
+      <template v-else>
+        <div class="flex items-center justify-center w-full h-full">
+          <div class="flex flex-col items-center justify-center gap-4">
+            <template v-if="hasValidKey">
+              <div class="flex items-center justify-center">
+                <img
+                  class="w-12 h-12 object-cover rounded-full object-center"
+                  src="/logo-128x128.png"
+                  alt="Tab GPT logo"
+                >
+              </div>
+              <p class="text-base text-gray-600 text-center">
+                Ask me a question about this page and <br>I'll try to answer it.
+              </p>
+            </template>
+            <template v-else>
+              <div class="flex items-center flex-col gap-4 justify-center">
+                <img
+                  class="w-12 h-12 object-cover rounded-full object-center"
+                  src="/logo-128x128.png"
+                  alt="Tab GPT logo"
+                >
+              </div>
+              <p class="text-base text-gray-600 text-center">
+                You need an OpenAI API Key to use Tab GPT
+              </p>
+              <router-link class="btn btn--primary" to="/settings">
+                Configure API key
+              </router-link>
+            </template>
+          </div>
+        </div>
+      </template>
     </div>
-    <div v-if="selectedText" class="flex items-center gap-2 h-auto p-4 border-t border-t-gray-200 bg-gray-50">
+
+    <!-- Selected text banner -->
+    <div v-if="hasSelectedText" class="flex items-center gap-2 h-auto p-4 border-t border-t-gray-200 bg-gray-50">
       <div>
         <IconInfo class="w-5 h-5 text-gray-700" />
       </div>
@@ -305,22 +276,25 @@ onMounted(async () => {
         You've selected some text. I'll analyze just  just the selection for more specific insights and faster results.
       </p>
     </div>
+
+    <!-- Footer -->
     <div class="shrink-0 flex items-center gap-2 h-20 pr-4 bg-white border-t border-t-gray-100 shadow">
       <input
+        ref="promptInput"
         v-model="prompt"
-        :disabled="pending"
+        :disabled="pending || !hasValidKey"
         placeholder="Type your question here..."
         type="text"
         style="box-shadow: none!important;"
         class="w-full h-full !pl-4 !pr-2 py-2 text-gray-700 !font-normal !bg-white !text-base tracking-normal appearance-none !shadow-none !outline-none !border-none !rounded-none focus:bg-white focus:!outline-none focus:!border-none focus:!shadow-none"
-        @keyup.enter="(e) => askGPT()"
+        @keyup.enter="handleAskGPT"
       >
       <div class="flex items-center">
         <button
-          :disabled="pending || !prompt"
+          :disabled="pending || !prompt || !hasValidKey"
           title="Send or send with highlighted text only"
           class="btn btn--primary !h-10 !py-0 whitespace-nowrap"
-          @click="askGPT"
+          @click="handleAskGPT"
         >
           SEND
         </button>
@@ -330,13 +304,13 @@ onMounted(async () => {
           width="240px"
           anchor="top-end"
           :trigger-class="`${pending ? 'pointer-events-none' : ''}`"
-          @prompt="(prompt) => runQuickPrompt(prompt)"
+          @prompt="(prompt) => handleRunQuickPrompt(prompt)"
           @manage="() => router.push('/quick-prompts')"
         >
           <template #trigger>
             <button
               v-tooltip="{ content: 'Quick prompts' }"
-              :disabled="pending"
+              :disabled="pending || !hasValidKey"
               class="btn btn--secondary flex items-center justify-center !p-0 h-10 !w-10 rounded-full"
             >
               <IconBolt class="w-5 h-5" />

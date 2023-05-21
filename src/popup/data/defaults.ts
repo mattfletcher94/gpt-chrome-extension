@@ -1,4 +1,4 @@
-import type { QuickPrompt } from '../types/QuickPrompt'
+import type { QuickPrompt } from '../stores/app'
 
 export function generateDefaultQuickPrompts(): QuickPrompt[] {
   return [
