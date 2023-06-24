@@ -8,7 +8,6 @@ import {
 import { nextTick, ref, shallowRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import IconClose from './IconClose.vue'
-import IconSettings from './IconSettings.vue'
 import IconChat from './IconChat.vue'
 import IconBolt from './IconBolt.vue'
 
@@ -36,11 +35,6 @@ const navigation = shallowRef([
     name: 'Quick prompts',
     path: '/quick-prompts/',
     icon: IconBolt,
-  },
-  {
-    name: 'Settings',
-    path: '/settings/',
-    icon: IconSettings,
   },
 ])
 

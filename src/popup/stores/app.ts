@@ -37,12 +37,10 @@ export type QuickPromptDelete = Prettify<Pick<QuickPrompt, 'id'>>
 export const useAppStore = defineStore('app', {
   state: () => ({
     menuOpen: false,
-    openaiKey: '',
     chatMessages: [] as ChatMessage[],
     quickPrompts: [] as QuickPrompt[],
   }),
   getters: {
-    getOpenaiKey: state => () => state.openaiKey,
     isPending: state => () => state.chatMessages.some(m => m.state === 'pending'),
     getQuickPrompts: state => () => state.quickPrompts,
     getQuickPrompt: state => (quickPromptId: string) => state.quickPrompts.find(q => q.id === quickPromptId),
@@ -55,26 +53,18 @@ export const useAppStore = defineStore('app', {
         quickPrompts: generateDefaultQuickPrompts(),
       })
 
-      const openaiKey = result?.openaiKey || ''
       const chatMessages = typeof result.chatMessages === 'string' ? JSON.parse(result.chatMessages) : result.chatMessages
       const quickPrompts = typeof result.quickPrompts === 'string' ? JSON.parse(result.quickPrompts) : result.quickPrompts
 
-      this.openaiKey = openaiKey
       this.chatMessages = chatMessages
       this.quickPrompts = quickPrompts
 
       // Resolve any pending chat messages and mark them as failed
       this.chatMessages = this.chatMessages.map((m) => {
         if (m.state === 'pending')
-          return { ...m, state: 'error', text: 'Sorry, the extension was closed while waiting for a response.' }
+          return { ...m, state: 'error', text: 'The extension was closed while waiting for a response.' }
         return m
       })
-    },
-
-    // Create crud actions for openaiKey
-    async setOpenaiKey(key: string) {
-      await chrome.storage.local.set({ openaiKey: key })
-      this.openaiKey = key
     },
 
     // Crud actions for quickPrompts

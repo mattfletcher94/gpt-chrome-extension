@@ -8,7 +8,6 @@ import type { QuickPrompt } from '../stores/app'
 import { useAppStore } from '../stores/app'
 import ChatWindow from '../components/ChatWindow.vue'
 import IconBolt from '../components/IconBolt.vue'
-import IconChevron from '../components/IconChevron.vue'
 import IconInfo from '../components/IconInfo.vue'
 import PopoverQuickPrompts from '../components/PopoverQuickPrompts.vue'
 import IconMenu from '../components/IconMenu.vue'
@@ -24,7 +23,6 @@ const appStore = useAppStore()
 // Local state
 const hasMounted = ref(false)
 const hasSelectedText = ref(false)
-const hasReceived401 = ref(false)
 const prompt = ref('')
 
 // Template refs
@@ -33,7 +31,6 @@ const chatWindowWrapper = ref<HTMLElement>()
 
 // Computed
 const pending = computed(() => appStore.chatMessages.filter(m => m.state === 'pending').length > 0)
-const hasValidKey = computed(() => appStore.getOpenaiKey().length > 0 && !hasReceived401.value)
 
 function handleRunQuickPrompt(p: QuickPrompt) {
   prompt.value = p.prompt
@@ -41,7 +38,7 @@ function handleRunQuickPrompt(p: QuickPrompt) {
 }
 
 async function handleAskGPT() {
-  if (pending.value || !prompt.value.trim() || !hasValidKey.value) return
+  if (pending.value || !prompt.value.trim()) return
 
   const pageDetails = await webPageContentChromeService.fetchPageDetails()
   const pageContent = await webPageContentChromeService.fetchPageContent()
@@ -89,8 +86,7 @@ async function handleAskGPT() {
   handleScrollToBottom()
 
   // Ask GPT
-  const { data, error, status } = await askGPT({
-    token: appStore.getOpenaiKey(),
+  const { data, error } = await askGPT({
     prompt: promptValue,
     content: JSON.stringify({
       pageDetails,
@@ -115,8 +111,6 @@ async function handleAskGPT() {
       state: 'success',
     })
   }
-
-  hasReceived401.value = status === 401
 
   // Scroll to bottom of chatWindow
   handleScrollToBottom()
@@ -170,29 +164,9 @@ onMounted(async () => {
           Tab GPT
         </div>
       </div>
-      <div class="shrink-0 ml-auto">
-        <!-- API key status -->
-        <div
-          v-if="hasValidKey"
-          v-tooltip="{ content: 'Your OpenAI API key is connected.' }"
-          class="flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-gray-500/10 border border-gray-500/20 text-gray-700"
-        >
-          <div class="w-2 h-2 rounded-full bg-green-500" />
-          <span>API key connected</span>
-        </div>
-        <button
-          v-else
-          v-tooltip="{ content: 'Your OpenAI API key is missing or invalid.' }"
-          class="flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-gray-500/10 border border-gray-500/20 text-gray-700"
-          @click="router.push('/settings')"
-        >
-          <IconInfo class="w-5 h-5 text-red-500" />
-          <span>API key invalid</span>
-          <IconChevron direction="right" class="w-4 h-4" />
-        </button>
-      </div>
+
       <!-- Menu button -->
-      <div class="shrink-0">
+      <div class="ml-auto shrink-0">
         <Popover width="180px">
           <template #trigger>
             <button
@@ -235,33 +209,16 @@ onMounted(async () => {
       <template v-else>
         <div class="flex items-center justify-center w-full h-full">
           <div class="flex flex-col items-center justify-center gap-4">
-            <template v-if="hasValidKey">
-              <div class="flex items-center justify-center">
-                <img
-                  class="w-12 h-12 object-cover rounded-full object-center"
-                  src="/logo-128x128.png"
-                  alt="Tab GPT logo"
-                >
-              </div>
-              <p class="text-base text-gray-600 text-center">
-                Ask me a question about this page and <br>I'll try to answer it.
-              </p>
-            </template>
-            <template v-else>
-              <div class="flex items-center flex-col gap-4 justify-center">
-                <img
-                  class="w-12 h-12 object-cover rounded-full object-center"
-                  src="/logo-128x128.png"
-                  alt="Tab GPT logo"
-                >
-              </div>
-              <p class="text-base text-gray-600 text-center">
-                You need an OpenAI API Key to use Tab GPT
-              </p>
-              <router-link class="btn btn--primary" to="/settings">
-                Configure API key
-              </router-link>
-            </template>
+            <div class="flex items-center justify-center">
+              <img
+                class="w-12 h-12 object-cover rounded-full object-center"
+                src="/logo-128x128.png"
+                alt="Tab GPT logo"
+              >
+            </div>
+            <p class="text-base text-gray-600 text-center">
+              Ask me a question about this page and <br>I'll try to answer it.
+            </p>
           </div>
         </div>
       </template>
@@ -282,7 +239,7 @@ onMounted(async () => {
       <input
         ref="promptInput"
         v-model="prompt"
-        :disabled="pending || !hasValidKey"
+        :disabled="pending"
         placeholder="Type your question here..."
         type="text"
         style="box-shadow: none!important;"
@@ -291,7 +248,7 @@ onMounted(async () => {
       >
       <div class="flex items-center">
         <button
-          :disabled="pending || !prompt || !hasValidKey"
+          :disabled="pending || !prompt"
           title="Send or send with highlighted text only"
           class="btn btn--primary !h-10 !py-0 whitespace-nowrap"
           @click="handleAskGPT"
@@ -310,7 +267,7 @@ onMounted(async () => {
           <template #trigger>
             <button
               v-tooltip="{ content: 'Quick prompts' }"
-              :disabled="pending || !hasValidKey"
+              :disabled="pending"
               class="btn btn--secondary flex items-center justify-center !p-0 h-10 !w-10 rounded-full"
             >
               <IconBolt class="w-5 h-5" />
