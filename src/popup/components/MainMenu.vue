@@ -135,7 +135,7 @@ watch(() => props.open, async (open) => {
               </div>
               <div ref="dialogFooter" class="block w-full p-4  border-t border-t-gray-200">
                 <div class="block text-sm font-medium">
-                  Version 1.0.0
+                  Version 1.0.1
                 </div>
               </div>
             </div>
